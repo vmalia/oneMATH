@@ -1,0 +1,49 @@
+#===============================================================================
+# Copyright 2023 Intel Corporation
+# Copyright (C) 2022 Heidelberg University, Engineering Mathematics and Computing Lab (EMCL) and Computing Centre (URZ)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions
+# and limitations under the License.
+#
+#
+# SPDX-License-Identifier: Apache-2.0
+#===============================================================================
+
+# Get oneAPI BaseKit image from the Docker Hub Intel repo
+FROM intel/oneapi-basekit:2023.2.1-devel-ubuntu22.04 AS BACKEND_MKL
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1
+
+RUN apt-get install -y gpg-agent
+RUN wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
+RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal main' | tee -a /etc/apt/sources.list.d/intel.list
+
+# Install build essentials
+RUN apt-get update -y && apt-get dist-upgrade -y && \
+    apt-get install -y -o=Dpkg::Use-Pty=0 \
+    intel-opencl-icd \
+    intel-level-zero-gpu level-zero \
+    intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 \
+    cmake ninja-build
+
+# Setup Working Directory
+COPY . /home/oneMKL
+RUN mkdir -p /home/oneMKL/BUILD
+WORKDIR /home/oneMKL/BUILD
+
+# Build
+RUN cmake -G "Ninja" .. -DBUILD_FUNCTIONAL_TESTS=OFF -DCMAKE_CXX_COMPILER=icpx
+RUN ninja
+
+# Test
+# RUN ctest -j$(nproc)

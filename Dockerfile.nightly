@@ -46,7 +46,7 @@ RUN mkdir -p /home/oneMKL/BUILD
 WORKDIR /home/oneMKL/BUILD
 
 # Build
-RUN cmake -G "Ninja" .. -DCMAKE_CXX_COMPILER=icpx -DREF_BLAS_ROOT=/home/Reference-LAPACK/OUTPUT -DREF_LAPACK_ROOT=/home/Reference-LAPACK/OUTPUT
+RUN cmake -G "Ninja" .. -DBUILD_EXAMPLES=OFF -DCMAKE_CXX_COMPILER=icpx -DREF_BLAS_ROOT=/home/Reference-LAPACK/OUTPUT -DREF_LAPACK_ROOT=/home/Reference-LAPACK/OUTPUT
 RUN ninja
 
 # Test

@@ -12,5 +12,5 @@ jobs:
     - uses: actions/checkout@v3
     - name: Build oneMKL
       run: |
-        docker build . --file docker/Dockerfile.nightly --tag onemkl_nightly_0.2:$(date +%Y%m%d)
+        docker build . --file Dockerfile.nightly --tag onemkl_nightly_0.2:$(date +%Y%m%d)
         docker run onemkl_nightly_0.2:$(date +%Y%m%d)

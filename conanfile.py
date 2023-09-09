@@ -18,12 +18,12 @@
 #===============================================================================
 
 from conans import ConanFile, CMake, tools
-from pkg_resources import packaging
+from packaging.version import parse
 from six import StringIO
 
 class oneMKLConan(ConanFile):
     name = "oneMKL"
-    version = "0.2.0-beta"
+    version = "0.1.0-beta"
     url = "https://github.com/oneapi-src/oneMKL"
     description = "oneMKL interfaces is an open-source implementation of oneMKL Data Parallel C++ (DPC++) interfaces according to oneMKL specification that can work with multiple devices (backends) using device specific libraries underneath."
     license = "Apache License Version 2.0"
@@ -101,8 +101,8 @@ THIRD-PARTY-PROGRAMS file and in the README.md file included with the Software P
             python_exe = "python"
             my_buffer = StringIO()
             self.run(f"{python_exe} --version", output=my_buffer)
-            ver_found = packaging.version.parse( my_buffer.getvalue().replace('Python ', '') )
-            if ver_found < packaging.version.parse('3.6.0'):
+            ver_found = parse( my_buffer.getvalue().replace('Python ', '') )
+            if ver_found < parse('3.6.0'):
                 self.output.error(f"Python 3.6.0 or higher required. Found {ver_found}")
                 return
         return python_exe

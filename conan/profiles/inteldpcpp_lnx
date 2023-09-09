@@ -24,21 +24,19 @@ os=Linux
 os_build=Linux
 arch=x86_64
 arch_build=x86_64
-compiler=intel-cc
-compiler.version="2021.4"
-compiler.mode="dpcpp"
+compiler=clang
+compiler.version=11
 compiler.libcxx=libstdc++11
-compiler.runtime=dynamic
-compiler.runtime_type=Release
 build_type=Release
 
 [build_requires]
-cmake/3.16.2
+cmake/[>=3.15]
 ninja/1.10.0
 
 [env]
 CONAN_CMAKE_GENERATOR="Ninja"
-CONAN_SYSREQUIRES_SUDO=0
+CONAN_SYSREQUIRES_MODE=enabled
+CONAN_SYSREQUIRES_SUDO=True
 CC=$COMPILER_PREFIX/bin/clang
 CXX=$COMPILER_PREFIX/bin/dpcpp
 CPATH=[$COMPILER_PREFIX/include]

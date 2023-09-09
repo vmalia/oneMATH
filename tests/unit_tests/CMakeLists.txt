@@ -17,11 +17,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #===============================================================================
 
-if("blas" IN_LIST TARGET_DOMAINS)
-  find_package(CBLAS REQUIRED)
-endif()
-
-if("lapack" IN_LIST TARGET_DOMAINS)
+if("blas" IN_LIST TARGET_DOMAINS OR "lapack" IN_LIST TARGET_DOMAINS)
     find_package(LAPACKE REQUIRED)
 endif()
 

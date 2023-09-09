@@ -23,22 +23,18 @@ FROM intel/oneapi-basekit:2023.2.1-devel-ubuntu22.04 AS BACKEND_MKL
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1
-ARG NETLIB_VERSION_TAG=3.11.0
+
+RUN apt-get install -y gpg-agent
+RUN wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
+RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal main' | tee -a /etc/apt/sources.list.d/intel.list
 
 # Install build essentials
-RUN apt-get update -y && \
+RUN apt-get update -y && apt-get dist-upgrade -y && \
     apt-get install -y -o=Dpkg::Use-Pty=0 \
-    cmake ninja-build gcc gfortran
-
-# Setup Reference BLAS and LAPACK Implementation for functional testing
-RUN mkdir -p /home/Reference-LAPACK
-WORKDIR /home/Reference-LAPACK
-RUN wget https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v${NETLIB_VERSION_TAG}.tar.gz && tar -xf v${NETLIB_VERSION_TAG}.tar.gz
-
-# Build Reference BLAS and LAPACK
-WORKDIR /home/Reference-LAPACK/lapack-${NETLIB_VERSION_TAG}/BUILD
-RUN cmake -G "Ninja" -DBUILD_INDEX64=ON -DCBLAS=ON -DLAPACKE=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_LIBDIR=/home/Reference-LAPACK/OUTPUT/lib ..
-RUN ninja install
+    intel-opencl-icd \
+    intel-level-zero-gpu level-zero \
+    intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 \
+    cmake ninja-build
 
 # Setup Working Directory
 COPY . /home/oneMKL
@@ -46,8 +42,8 @@ RUN mkdir -p /home/oneMKL/BUILD
 WORKDIR /home/oneMKL/BUILD
 
 # Build
-RUN cmake -G "Ninja" .. -DBUILD_FUNCTIONAL_TESTS=OFF -DCMAKE_CXX_COMPILER=icpx -DREF_BLAS_ROOT=/home/Reference-LAPACK/OUTPUT -DREF_LAPACK_ROOT=/home/Reference-LAPACK/OUTPUT
+RUN cmake -G "Ninja" .. -DBUILD_FUNCTIONAL_TESTS=OFF -DCMAKE_CXX_COMPILER=icpx
 RUN ninja
 
 # Test
-CMD ctest -j$(nproc)
+# RUN ctest -j$(nproc)

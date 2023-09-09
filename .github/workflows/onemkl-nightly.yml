@@ -1,0 +1,16 @@
+name: oneMKL Interfaces Nightly
+
+on:
+  schedule:
+    - cron: '00 7 * * 0,1,2,3,4,5,6'
+  workflow_dispatch:
+
+jobs:
+  build_n_test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build oneMKL
+      run: |
+        docker build . --file docker/Dockerfile.nightly --tag onemkl_nightly_0.2:$(date +%Y%m%d)
+        docker run onemkl_nightly_0.2:$(date +%Y%m%d)

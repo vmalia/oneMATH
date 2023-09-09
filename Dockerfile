@@ -28,7 +28,7 @@ ARG NETLIB_VERSION_TAG=3.11.0
 # Install build essentials
 RUN apt-get update -y && \
     apt-get install -y -o=Dpkg::Use-Pty=0 \
-    python3-pip cmake gcc gfortran
+    cmake ninja-build gcc gfortran
 
 # Setup Reference BLAS and LAPACK Implementation for functional testing
 RUN mkdir -p /home/Reference-LAPACK
@@ -37,8 +37,8 @@ RUN wget https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v${NETLIB_
 
 # Build Reference BLAS and LAPACK
 WORKDIR /home/Reference-LAPACK/lapack-${NETLIB_VERSION_TAG}/BUILD
-RUN cmake -DBUILD_INDEX64=ON -DCBLAS=ON -DLAPACKE=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_LIBDIR=/home/Reference-LAPACK/OUTPUT/lib ..
-RUN cmake --build . -j$(nproc) --target install
+RUN cmake -G "Ninja" -DBUILD_INDEX64=ON -DCBLAS=ON -DLAPACKE=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_INSTALL_LIBDIR=/home/Reference-LAPACK/OUTPUT/lib ..
+RUN ninja install
 
 # Setup Working Directory
 COPY . /home/oneMKL
@@ -46,8 +46,8 @@ RUN mkdir -p /home/oneMKL/BUILD
 WORKDIR /home/oneMKL/BUILD
 
 # Build
-RUN cmake .. -DCMAKE_CXX_COMPILER=icpx -DREF_BLAS_ROOT=/home/Reference-LAPACK/OUTPUT -DREF_LAPACK_ROOT=/home/Reference-LAPACK/OUTPUT
-RUN cmake --build . -j$(nproc)
+RUN cmake -G "Ninja" .. -DCMAKE_CXX_COMPILER=icpx -DREF_BLAS_ROOT=/home/Reference-LAPACK/OUTPUT -DREF_LAPACK_ROOT=/home/Reference-LAPACK/OUTPUT
+RUN ninja
 
-# Run testing
+# Test
 CMD ctest -j$(nproc)

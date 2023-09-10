@@ -25,6 +25,12 @@ ARG DEBIAN_FRONTEND=noninteractive
 ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1
 ARG NETLIB_VERSION_TAG=3.11.0
 
+# Make space in the docker image
+RUN echo "Removing large directories"
+# deleting 15GB
+RUN rm -rf /usr/share/dotnet/
+RUN df -h
+
 # Install build essentials
 RUN apt-get update -y && \
     apt-get install -y -o=Dpkg::Use-Pty=0 \
@@ -49,5 +55,7 @@ WORKDIR /home/oneMKL/BUILD
 RUN cmake -G "Ninja" .. -DBUILD_EXAMPLES=OFF -DCMAKE_CXX_COMPILER=icpx -DREF_BLAS_ROOT=/home/Reference-LAPACK/OUTPUT -DREF_LAPACK_ROOT=/home/Reference-LAPACK/OUTPUT
 RUN ninja
 
+# Run cpu device only
+# Known Intel GPU support issue in docker https://github.com/docker/cli/issues/2063.
 # Test
-CMD ctest -j$(nproc)
+RUN ctest -R cpu

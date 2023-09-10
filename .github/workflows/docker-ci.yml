@@ -1,10 +1,10 @@
-name: oneMKL Interfaces CI
+name: oneMKL Interfaces Docker CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "develop" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "develop" ]
   workflow_dispatch:
 
 jobs:
@@ -15,4 +15,3 @@ jobs:
     - name: Build oneMKL
       run: |
         docker build . --file Dockerfile.ci --tag onemkl_0.2
-        docker run onemkl_0.2

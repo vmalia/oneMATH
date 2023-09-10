@@ -1,4 +1,4 @@
-name: oneMKL Interfaces Nightly
+name: oneMKL Interfaces Docker Nightly
 
 on:
   schedule:
@@ -13,4 +13,3 @@ jobs:
     - name: Build oneMKL
       run: |
         docker build . --file Dockerfile.nightly --tag onemkl_nightly_0.2:$(date +%Y%m%d)
-        docker run onemkl_nightly_0.2:$(date +%Y%m%d)

@@ -46,4 +46,4 @@ RUN cmake -G "Ninja" .. -DBUILD_FUNCTIONAL_TESTS=OFF -DCMAKE_CXX_COMPILER=icpx
 RUN ninja
 
 # Test
-# RUN ctest -j$(nproc)
+RUN ctest -j$(nproc)

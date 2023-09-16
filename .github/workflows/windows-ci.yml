@@ -33,10 +33,10 @@ jobs:
       shell: cmd
       run: |
         call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
-        echo "oneapi_libpath=%LIBRARY_PATH%" >> "%GITHUB_ENV%"
-        echo "oneapi_path=%PATH%" >> "%GITHUB_ENV%"
-        echo "oneapi_cpath=%CPATH%" >> "%GITHUB_ENV%"
-        echo "oneapi_mklroot=%MKLROOT%" >> "%GITHUB_ENV%"
+        echo "LIBRARY_PATH=%LIBRARY_PATH%" >> "%GITHUB_ENV%"
+        echo "PATH=%PATH%" >> "%GITHUB_ENV%"
+        echo "CPATH=%CPATH%" >> "%GITHUB_ENV%"
+        echo "MKLROOT=%MKLROOT%" >> "%GITHUB_ENV%"
 
     - uses: actions/checkout@v3
     - name: Set reusable strings
@@ -50,11 +50,11 @@ jobs:
       id: build-step
       shell: cmd
       env:
-        PATH: ${{ env.oneapi_path }}
-        CPATH: ${{ env.oneapi_cpath }}
-        LIBRARY_PATH: ${{ env.oneapi_libpath }}
-        LD_LIBRARY_PATH: ${{ env.oneapi_ld_libpath }}
-        MKLROOT: ${{ env.oneapi_mklroot }}
+        PATH: ${{ env.PATH }}
+        CPATH: ${{ env.CPATH }}
+        LIBRARY_PATH: ${{ env.LIBRARY_PATH }}
+        LD_LIBRARY_PATH: ${{ env.LD_LIBRARY_PATH }}
+        MKLROOT: ${{ env.MKLROOT }}
       run: |
         ${{ matrix.cpp_compiler }} --version
         cmake -B ${{ steps.strings.outputs.build-output-dir }} -G "Ninja" -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_FUNCTIONAL_TESTS=OFF -S ${{ github.workspace }}

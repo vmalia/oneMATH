@@ -1,4 +1,4 @@
-name: oneMKL Interfaces Docker Nightly
+name: Linux Nightly - oneMKL backend
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_n_test:
+  Nightly:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

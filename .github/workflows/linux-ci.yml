@@ -1,4 +1,4 @@
-name: oneMKL Interfaces Docker CI
+name: Linux CI - oneMKL backend
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_n_test:
+  CI:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

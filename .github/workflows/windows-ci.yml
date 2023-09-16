@@ -1,4 +1,4 @@
-name: oneMKL Interfaces CMake CI
+name: Windows CI - oneMKL backend
 
 on:
   push:
@@ -13,50 +13,23 @@ jobs:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest]
+        os: [windows-latest]
         build_type: [Release]
         include:
           - os: windows-latest
             cpp_compiler: icx
-          - os: ubuntu-22.04
-            cpp_compiler: icpx
 
     steps:
     - name: Install oneMKL and Intel C++/DPC++ compiler
-      id: basekit-install-lnx
-      if: matrix.os == 'ubuntu-22.04'
-      run: |
-        wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
-        echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
-        sudo apt-get update -y
-        sudo apt-get install -y \
-            intel-oneapi-common-vars intel-oneapi-common-licensing-2023.2.0 \
-            intel-oneapi-compiler-dpcpp-cpp-2023.2.0 \
-            intel-oneapi-mkl-devel-2023.2.0
-
-    - name: Install oneMKL and Intel C++/DPC++ compiler
-      id: basekit-install-win
-      if: matrix.os == 'windows-latest'
+      id: basekit-install
       shell: cmd
       run: |
         curl -o C:\oneapi_installer.exe https://registrationcenter-download.intel.com/akdlm/IRC_NAS/f96c71db-2c6c-45d9-8c1f-0348ef5885cf/w_BaseKit_p_2023.2.0.49396_offline.exe
         dir C:
         call "C:\oneapi_installer.exe" -s -a --silent --eula accept --install-dir "C:\Program Files (x86)\Intel\oneAPI"
 
-    - name: Setup oneAPI environment Linux
-      id: env-setup-lnx
-      if: matrix.os == 'ubuntu-22.04'
-      run: |
-        source /opt/intel/oneapi/setvars.sh
-        echo "oneapi_ld_libpath=${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
-        echo "oneapi_path=${PATH}" >> "$GITHUB_ENV"
-        echo "oneapi_cpath=${CPATH}" >> "$GITHUB_ENV"
-        echo "oneapi_mklroot=${MKLROOT}" >> "$GITHUB_ENV"
-        echo "config_shell=bash" >> "$GITHUB_ENV"
-
-    - name: Setup oneAPI environment Windows
-      id: env-setup-win
-      if: matrix.os == 'windows-latest'
+    - name: Setup oneAPI environment
+      id: env-setup
       shell: cmd
       run: |
         call "C:\Program Files (x86)\Intel\oneAPI\setvars.bat"
@@ -73,28 +46,8 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - uses: seanmiddleditch/gha-setup-ninja@master
-    - name: Configure and Build (Linux)
-      id: build-step-lnx
-      if: matrix.os == 'ubuntu-22.04'
-      env:
-        PATH: ${{ env.oneapi_path }}
-        CPATH: ${{ env.oneapi_cpath }}
-        LIBRARY_PATH: ${{ env.oneapi_libpath }}
-        LD_LIBRARY_PATH: ${{ env.oneapi_ld_libpath }}
-        MKLROOT: ${{ env.oneapi_mklroot }}
-      run: |
-        ${{ matrix.cpp_compiler }} --version
-        cmake -B ${{ steps.strings.outputs.build-output-dir }} \
-        -G "Ninja" \
-        -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-        -DBUILD_FUNCTIONAL_TESTS=OFF \
-        -S ${{ github.workspace }}
-        cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
-
-    - name: Configure and Build (Windows)
-      id: build-step-win
-      if: matrix.os == 'windows-latest'
+    - name: Configure and Build
+      id: build-step
       shell: cmd
       env:
         PATH: ${{ env.oneapi_path }}
@@ -110,6 +63,7 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      shell: cmd
       env:
         PATH:             ${{ env.oneapi_path }}
         CPATH:            ${{ env.oneapi_cpath }}
@@ -117,4 +71,5 @@ jobs:
         LD_LIBRARY_PATH:  ${{ env.oneapi_ld_libpath }}
       # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-      run: ctest -V --build-config ${{ matrix.build_type }}
+      # Github actions does not provide GPU-accelerated hosts, so run cpu only
+      run: ctest -V -R cpu --build-config ${{ matrix.build_type }}

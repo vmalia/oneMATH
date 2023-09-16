@@ -1,5 +1,9 @@
 # oneAPI Math Kernel Library (oneMKL) Interfaces
 
+|Linux|Windows
+|---|---|
+|[![oneMKL backend](https://github.com/virajmalia/oneMKL/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/virajmalia/oneMKL/actions/workflows/linux-ci.yml)|[![oneMKL backend](https://github.com/virajmalia/oneMKL/actions/workflows/windows-ci.yml/badge.svg)](https://github.com/virajmalia/oneMKL/actions/workflows/windows-ci.yml)|
+
 <img align="left" src="https://spec.oneapi.io/oneapi-logo-white-scaled.jpg" alt="oneAPI logo">
 
 oneMKL Interfaces is an open-source implementation of the oneMKL Data Parallel C++ (DPC++) interface according to the [oneMKL specification](https://spec.oneapi.com/versions/latest/elements/oneMKL/source/index.html). It works with multiple devices (backends) using device-specific libraries underneath.

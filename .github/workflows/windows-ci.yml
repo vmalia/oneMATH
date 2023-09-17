@@ -48,13 +48,13 @@ jobs:
     - uses: seanmiddleditch/gha-setup-ninja@master
     - name: Configure and Build
       id: build-step
-      shell: cmd
       env:
         PATH: ${{ env.oneapi_path }}
         CPATH: ${{ env.oneapi_cpath }}
         LIBRARY_PATH: ${{ env.oneapi_libpath }}
         LD_LIBRARY_PATH: ${{ env.oneapi_ld_libpath }}
         MKLROOT: ${{ env.oneapi_mklroot }}
+      shell: cmd
       run: |
         ${{ matrix.cpp_compiler }} --version
         cmake -B ${{ steps.strings.outputs.build-output-dir }} -G "Ninja" -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DBUILD_FUNCTIONAL_TESTS=OFF -S ${{ github.workspace }}

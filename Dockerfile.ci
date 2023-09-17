@@ -24,6 +24,12 @@ FROM intel/oneapi-basekit:2023.2.1-devel-ubuntu22.04 AS BACKEND_MKL
 ARG DEBIAN_FRONTEND=noninteractive
 ARG APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1
 
+# Make space in the docker image
+RUN echo "Removing large directories"
+# deleting 15GB
+RUN rm -rf /usr/share/dotnet/
+RUN df -h
+
 RUN apt-get install -y gpg-agent
 RUN wget -qO - https://repositories.intel.com/graphics/intel-graphics.key | gpg --dearmor --output /usr/share/keyrings/intel-graphics.gpg
 RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] https://repositories.intel.com/graphics/ubuntu focal main' | tee -a /etc/apt/sources.list.d/intel.list
@@ -31,9 +37,6 @@ RUN echo 'deb [arch=amd64 signed-by=/usr/share/keyrings/intel-graphics.gpg] http
 # Install build essentials
 RUN apt-get update -y && \
     apt-get install -y -o=Dpkg::Use-Pty=0 \
-    intel-opencl-icd \
-    intel-level-zero-gpu level-zero \
-    intel-media-va-driver-non-free libmfx1 libmfxgen1 libvpl2 \
     cmake ninja-build
 
 # Setup Working Directory
@@ -45,5 +48,7 @@ WORKDIR /home/oneMKL/BUILD
 RUN cmake -G "Ninja" .. -DBUILD_FUNCTIONAL_TESTS=OFF -DCMAKE_CXX_COMPILER=icpx
 RUN ninja
 
+# Run cpu device only
+# Known Intel GPU support issue in docker https://github.com/docker/cli/issues/2063.
 # Test
-RUN ctest -j$(nproc)
+RUN ctest -R cpu

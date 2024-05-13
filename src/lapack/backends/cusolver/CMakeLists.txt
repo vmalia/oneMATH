@@ -27,6 +27,7 @@ set(SOURCES     cusolver_lapack.cpp
                 $<$<BOOL:${BUILD_SHARED_LIBS}>: cusolver_wrappers.cpp>)
 add_library(${LIB_NAME})
 add_library(${LIB_OBJ} OBJECT ${SOURCES})
+add_dependencies(onemkl_backend_libs_lapack ${LIB_NAME})
 
 target_include_directories(${LIB_OBJ}
   PRIVATE ${PROJECT_SOURCE_DIR}/include
@@ -34,6 +35,7 @@ target_include_directories(${LIB_OBJ}
           ${PROJECT_SOURCE_DIR}/src
           ${PROJECT_SOURCE_DIR}/src/blas/backends/cublas
           ${CMAKE_BINARY_DIR}/bin
+          ${ONEMKL_GENERATED_INCLUDE_PATH}
 )
 target_compile_options(${LIB_OBJ} PRIVATE ${ONEMKL_BUILD_COPT})
 target_link_libraries(${LIB_OBJ} 

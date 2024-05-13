@@ -30,17 +30,22 @@ set(SOURCES cublas_level1.cpp
                 $<$<BOOL:${BUILD_SHARED_LIBS}>: cublas_wrappers.cpp>)
 add_library(${LIB_NAME})
 add_library(${LIB_OBJ} OBJECT ${SOURCES})
+add_dependencies(onemkl_backend_libs_blas ${LIB_NAME})
 
 target_include_directories(${LIB_OBJ}
   PRIVATE ${PROJECT_SOURCE_DIR}/include
           ${PROJECT_SOURCE_DIR}/src/include
           ${PROJECT_SOURCE_DIR}/src
+          ${ONEMKL_GENERATED_INCLUDE_PATH}
 )
 target_compile_options(${LIB_OBJ} PRIVATE ${ONEMKL_BUILD_COPT})
-target_compile_options(ONEMKL::SYCL::SYCL INTERFACE
-      -fsycl-targets=nvptx64-nvidia-cuda -fsycl-unnamed-lambda)
-target_link_options(ONEMKL::SYCL::SYCL INTERFACE
-      -fsycl-targets=nvptx64-nvidia-cuda)
+
+if(NOT ${ONEMKL_SYCL_IMPLEMENTATION} STREQUAL "hipsycl")
+    target_compile_options(ONEMKL::SYCL::SYCL INTERFACE
+          -fsycl-targets=nvptx64-nvidia-cuda -fsycl-unnamed-lambda)
+    target_link_options(ONEMKL::SYCL::SYCL INTERFACE
+          -fsycl-targets=nvptx64-nvidia-cuda)
+endif()
 target_link_libraries(${LIB_OBJ} PUBLIC ONEMKL::SYCL::SYCL ONEMKL::cuBLAS::cuBLAS)
 target_compile_features(${LIB_OBJ} PUBLIC cxx_std_11)
 set_target_properties(${LIB_OBJ} PROPERTIES

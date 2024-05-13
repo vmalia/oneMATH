@@ -29,7 +29,8 @@ set(SOURCES netlib_common.hpp
 )
 add_library(${LIB_NAME})
 add_library(${LIB_OBJ} OBJECT ${SOURCES})
-  
+add_dependencies(onemkl_backend_libs_blas ${LIB_NAME})
+
 if (USE_ADD_SYCL_TO_TARGET_INTEGRATION)
   add_sycl_to_target(TARGET ${LIB_OBJ} SOURCES ${SOURCES})
 endif()
@@ -40,6 +41,7 @@ target_include_directories(${LIB_OBJ}
           ${PROJECT_SOURCE_DIR}/src/include
           ${CMAKE_BINARY_DIR}/bin
           ${NETLIB_INCLUDE}
+          ${ONEMKL_GENERATED_INCLUDE_PATH}
 )
 
 target_compile_options(${LIB_OBJ} PRIVATE ${ONEMKL_BUILD_COPT})

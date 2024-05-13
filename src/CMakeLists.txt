@@ -29,8 +29,11 @@ set(ENABLE_PORTBLAS_BACKEND_INTEL_CPU OFF CACHE INTERNAL "")
 set(ENABLE_PORTBLAS_BACKEND_INTEL_GPU OFF CACHE INTERNAL "")
 set(ENABLE_PORTBLAS_BACKEND_AMD_GPU OFF CACHE INTERNAL "")
 set(ENABLE_PORTBLAS_BACKEND_NVIDIA_GPU OFF CACHE INTERNAL "")
+# store path to CMAKE_CURRENT_BINARY_DIR to use it later (makes FetchContent_Declare workable)
+set(ONEMKL_GENERATED_INCLUDE_PATH ${CMAKE_CURRENT_BINARY_DIR})
 
 # Build loader and backends for each domain
+add_custom_target(onemkl_backend_libs)
 foreach(domain ${TARGET_DOMAINS})
   add_subdirectory(${domain})
 endforeach()
@@ -50,6 +53,12 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/oneapi/mkl/detail/config.hpp"
 if(BUILD_SHARED_LIBS)
   add_library(onemkl SHARED)
 
+  # The loader library depends on all the backend libraries as it uses
+  # dlopen to load them at runtime.
+  # Use add_dependencies to ensure that all the backend libraries are
+  # (re-)built when compiling the loader or runtime binaries.
+  add_dependencies(onemkl onemkl_backend_libs)
+
   target_include_directories(onemkl
     PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
@@ -58,6 +67,10 @@ if(BUILD_SHARED_LIBS)
   set_target_properties(onemkl PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
   )
+  # w/a for setting oneMKL Interfaces installed headers as -I instead of -isystem for cmake >= 3.25 for workable find_package(MKL) combination
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.25.0")
+    set_target_properties(onemkl PROPERTIES EXPORT_NO_SYSTEM true)
+  endif()
 
   # Build dispatcher library
   set (ONEMKL_LIBS ${TARGET_DOMAINS})

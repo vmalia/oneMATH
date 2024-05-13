@@ -61,10 +61,11 @@ set(SOURCES philox4x32x10.cpp mrg32k3a.cpp $<$<BOOL:${BUILD_SHARED_LIBS}>:
 
 add_library(${LIB_NAME})
 add_library(${LIB_OBJ} OBJECT ${SOURCES})
+add_dependencies(onemkl_backend_libs_rng ${LIB_NAME})
 
 target_include_directories(
   ${LIB_OBJ} PRIVATE ${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/src
-                     ${CMAKE_BINARY_DIR}/bin ${MKL_INCLUDE})
+                     ${CMAKE_BINARY_DIR}/bin ${MKL_INCLUDE} ${ONEMKL_GENERATED_INCLUDE_PATH})
 
 target_link_libraries(${LIB_OBJ} PUBLIC ONEMKL::SYCL::SYCL
                                         ONEMKL::rocRAND::rocRAND)

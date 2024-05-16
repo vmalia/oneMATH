@@ -16,7 +16,7 @@ jobs:
         echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
         sudo apt update
         sudo apt install ninja-build intel-basekit-2024.1
-    - name: Checkout
+    - name: Checkout project
       uses: actions/checkout@v3
     - name: Build
       run: |

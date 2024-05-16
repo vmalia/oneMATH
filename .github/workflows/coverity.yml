@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Project Setup
-    - uses: actions/checkout@v3
+      uses: actions/checkout@v3
       run: |
         wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
         echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
@@ -20,7 +20,8 @@ jobs:
         . /opt/intel/oneapi/setvars.sh
         mkdir build && cd build
         cmake -G"Ninja" ..
-    - uses: vapier/coverity-scan-action@v1
+    - name: Coverity Scan
+      uses: vapier/coverity-scan-action@v1
       with:
         email: 'viraj.malia@intel.com'
         token: ${{ secrets.COVERITY_SCAN_TOKEN }}

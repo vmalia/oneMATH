@@ -10,13 +10,16 @@ jobs:
   coverity:
     runs-on: ubuntu-latest
     steps:
-    - name: Project Setup
-      uses: actions/checkout@v3
+    - name: Setup Build Environment
       run: |
         wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
         echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
         sudo apt update
         sudo apt install ninja-build intel-basekit-2024.1
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Build
+      run: |
         . /opt/intel/oneapi/setvars.sh
         mkdir build && cd build
         cmake -G"Ninja" ..
@@ -27,4 +30,4 @@ jobs:
         token: ${{ secrets.COVERITY_SCAN_TOKEN }}
         working-directory: 'build'
         description: 'Coverity Scan Description'
-        command: ' && ninja'
+        command: 'ninja'

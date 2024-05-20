@@ -27,14 +27,14 @@ jobs:
     - name: Configure & build a domain
       run: |
         source /opt/intel/oneapi/setvars.sh
-        cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build
         cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build_cov
         cmake --build build/ --target all --parallel
-    - name: Coverity Scan
-      uses: vapier/coverity-scan-action@v1
-      with:
-        email: 'viraj.malia@intel.com'
-        token: ${{ secrets.COVERITY_SCAN_TOKEN }}
-        working-directory: 'build_cov'
-        description: 'Coverity Scan Description'
-        command: 'cmake --build . --target all --parallel'
+    - name: Setup Coverity Scan Tool
+      run: |
+        wget https://scan.coverity.com/download/cxx/linux64 --post-data "token=${{ secrets.COVERITY_SCAN_TOKEN }}" -O coverity_tool.tgz
+        tar -xf coverity_tool.tgz
+        export PATH=$PWD/coverity_tool/bin/:$PATH
+    - name: Run Coverity Scan Tool
+      run: |
+        cov-config --comptype clang --compiler icx
+        cov-build --dir cov-int cmake --build build_cov/ --target all --parallel

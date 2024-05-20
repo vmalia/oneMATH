@@ -28,7 +28,7 @@ jobs:
       run: |
         source /opt/intel/oneapi/setvars.sh
         cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build_cov
-        cmake --build build/ --target all --parallel
+        cmake --build build_cov/ --target all --parallel
     - name: Setup Coverity Scan Tool
       run: |
         wget https://scan.coverity.com/download/cxx/linux64 --post-data "token=${{ secrets.COVERITY_SCAN_TOKEN }}" -O coverity_tool.tgz

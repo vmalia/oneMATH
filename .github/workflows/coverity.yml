@@ -31,10 +31,11 @@ jobs:
         cmake --build build_cov/ --target all --parallel
     - name: Setup Coverity Scan Tool
       run: |
-        curl https://scan.coverity.com/download/cxx/linux64 --no-progress-meter --output cov-analysis.tar.gz --data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=vmalia%2FoneMKL"
+        curl https://scan.coverity.com/download/cxx/linux64 --output cov-analysis.tar.gz --data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=vmalia%2FoneMKL"
         tar -xf cov-analysis.tar.gz
-        export PATH=$PWD/cov-analysis/bin/:$PATH
+        export COV_CONFIG=$(find $PWD/cov-analysis-*/ -type f -name cov-config)
+        export COV_BUILD=$(find $PWD/cov-analysis-*/ -type f -name cov-build)
     - name: Run Coverity Scan Tool
       run: |
-        cov-config --comptype clang --compiler icx
-        cov-build --dir cov-int cmake --build build_cov/ --target all --parallel
+        $(COV_CONFIG) --comptype clang --compiler icx
+        $(COV_BUILD) --dir cov-int cmake --build build_cov/ --target all --parallel

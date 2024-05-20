@@ -28,6 +28,11 @@ jobs:
       run: |
         curl https://scan.coverity.com/download/cxx/linux64 --no-progress-meter --output cov-analysis.tar.gz --data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=vmalia%2FoneMKL"
         tar -xf cov-analysis.tar.gz
+    - name: Get current date and time
+      id: dt
+      uses: Kaven-Universe/github-action-current-date-time@v1
+      with:
+        format: "YYYYMMDD_HHmmss"
     - name: Configure & build with Coverity
       run: |
         source /opt/intel/oneapi/setvars.sh
@@ -35,3 +40,10 @@ jobs:
         cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icx --compiler icx
         cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icpx --compiler icpx
         cov-analysis-linux64-2023.6.2/bin/cov-build --dir cov-int cmake --build build_cov/ --target all --parallel
+        zip -r onemkl-interfaces.zip cov-int/
+        curl --form token=${{ secrets.COVERITY_SCAN_TOKEN }} \
+              --form email=viraj.malia@intel.com \
+              --form file=@onemkl-interfaces${{ steps.dt.outputs }}.zip \
+              --form version="Version" \
+              --form description="Description" \
+              https://scan.coverity.com/builds?project=vmalia%2FoneMKL

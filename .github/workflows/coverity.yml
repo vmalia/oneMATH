@@ -32,9 +32,9 @@ jobs:
       run: |
         curl https://scan.coverity.com/download/cxx/linux64 --output cov-analysis.tar.gz --data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=vmalia%2FoneMKL"
         tar -xf cov-analysis.tar.gz
-    - name: Run Coverity Scan Tool
-      run: |
         export COV_CONFIG=$(find $PWD/cov-analysis-*/ -type f -name cov-config)
         export COV_BUILD=$(find $PWD/cov-analysis-*/ -type f -name cov-build)
-        $(COV_CONFIG) --comptype clang --compiler icx
-        $(COV_BUILD) --dir cov-int cmake --build build_cov/ --target all --parallel
+    - name: Run Coverity Scan Tool
+      run: |
+        ${COV_CONFIG} --comptype clang --compiler icx
+        ${COV_BUILD} --dir cov-int cmake --build build_cov/ --target all --parallel

@@ -29,12 +29,13 @@ jobs:
         source /opt/intel/oneapi/setvars.sh
         cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build_cov
     - name: Setup Coverity Scan Tool
+      id: coverity
       run: |
         curl https://scan.coverity.com/download/cxx/linux64 --output cov-analysis.tar.gz --data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=vmalia%2FoneMKL"
         tar -xf cov-analysis.tar.gz
-        export COV_CONFIG=$(find $PWD/cov-analysis-*/ -type f -name cov-config)
-        export COV_BUILD=$(find $PWD/cov-analysis-*/ -type f -name cov-build)
+        echo "config=$(find $PWD/cov-analysis-*/ -type f -name cov-config)" >> $GITHUB_OUTPUT
+        echo "build=$(find $PWD/cov-analysis-*/ -type f -name cov-build)" >> $GITHUB_OUTPUT
     - name: Run Coverity Scan Tool
       run: |
-        ${COV_CONFIG} --comptype clang --compiler icx
-        ${COV_BUILD} --dir cov-int cmake --build build_cov/ --target all --parallel
+        ${{ steps.coverity.config }} --comptype clang --compiler icx
+        ${{ steps.coverity.build }} --dir cov-int cmake --build build_cov/ --target all --parallel

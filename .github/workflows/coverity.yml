@@ -30,8 +30,8 @@ jobs:
         cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build_cov
     - name: Coverity Scan
       run: |
-        curl https://scan.coverity.com/download/cxx/linux64 --output cov-analysis.tar.gz --data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=vmalia%2FoneMKL"
+        curl https://scan.coverity.com/download/cxx/linux64 --no-progress-meter --output cov-analysis.tar.gz --data "token=${{ secrets.COVERITY_SCAN_TOKEN }}&project=vmalia%2FoneMKL"
         tar -xf cov-analysis.tar.gz
-        ls -lah cov-analysis-linux64-2023.6.2/
-        ./cov-analysis-linux64-2023.6.2/bin/cov-config --comptype clang --compiler icx
-        ./cov-analysis-linux64-2023.6.2/bin/cov-build --dir cov-int cmake --build build_cov/ --target all --parallel
+        ls -lah cov-analysis-linux64-2023.6.2/bin
+        cov-analysis-linux64-2023.6.2/bin/cov-config --comptype clang --compiler icx
+        cov-analysis-linux64-2023.6.2/bin/cov-build --dir cov-int cmake --build build_cov/ --target all --parallel

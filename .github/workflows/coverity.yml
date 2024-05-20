@@ -24,15 +24,17 @@ jobs:
         components: |
           icx@2024.1.0
           mkl@2024.1.0
-    - name: Configure for a domain
+    - name: Configure & build a domain
       run: |
         source /opt/intel/oneapi/setvars.sh
         cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build
+        cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build_cov
+        cmake --build build/ --target all --parallel
     - name: Coverity Scan
       uses: vapier/coverity-scan-action@v1
       with:
         email: 'viraj.malia@intel.com'
         token: ${{ secrets.COVERITY_SCAN_TOKEN }}
-        working-directory: 'build'
+        working-directory: 'build_cov'
         description: 'Coverity Scan Description'
         command: 'cmake --build . --target all --parallel'

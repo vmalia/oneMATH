@@ -37,6 +37,8 @@ jobs:
       run: |
         source /opt/intel/oneapi/setvars.sh
         cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build_cov
+        cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icx --compiler icx
+        cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icpx --compiler icpx
         cov-analysis-linux64-2023.6.2/bin/cov-build --dir cov-int cmake --build build_cov/ --target all --parallel
     - name: Upload Coverity Scan
       uses: actions/upload-artifact@v4

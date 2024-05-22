@@ -41,9 +41,9 @@ jobs:
     - name: Build with Coverity
       working-directory: build_cov
       run: |
-        cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icx --compiler icx
-        cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icpx --compiler icpx
-        cov-analysis-linux64-2023.6.2/bin/cov-build --dir cov-int make
+        ../cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icx --compiler icx
+        ../cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icpx --compiler icpx
+        ../cov-analysis-linux64-2023.6.2/bin/cov-build --dir cov-int make
     - name: Upload Coverity Scan
       uses: actions/upload-artifact@v4
       with:

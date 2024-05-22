@@ -37,10 +37,10 @@ jobs:
     - name: Configure & build with Coverity
       run: |
         source /opt/intel/oneapi/setvars.sh
-        cmake -G"Ninja" -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build_cov
+        cmake -DENABLE_MKLGPU_BACKEND=off -DTARGET_DOMAINS=${{ matrix.domain }} -DCMAKE_VERBOSE_MAKEFILE=on -DBUILD_FUNCTIONAL_TESTS=False -B build_cov
         cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icx --compiler icx
         cov-analysis-linux64-2023.6.2/bin/cov-configure --template --comptype intel_icpx --compiler icpx
-        cov-analysis-linux64-2023.6.2/bin/cov-build --dir cov-int ninja
+        cov-analysis-linux64-2023.6.2/bin/cov-build --dir cov-int make
     - name: Upload Coverity Scan
       uses: actions/upload-artifact@v4
       with:

@@ -1,0 +1,19 @@
+# Base Image with Common Dependencies and Netlib
+FROM ubuntu:22.04 AS base
+
+# Install common dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    wget \
+    git \
+    libnuma-dev \
+    libblas-dev \
+    liblapack-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Default command
+CMD ["/bin/bash"]

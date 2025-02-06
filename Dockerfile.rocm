@@ -1,0 +1,56 @@
+# Use the ROCm base image
+FROM rocm/dev-ubuntu-22.04:5.4.2-complete
+
+# Install common dependencies and netlib
+COPY --from=base:latest /usr /usr
+
+# Install common dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    wget \
+    git \
+    libnuma-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables for ROCm
+ENV ROCM_HOME=/opt/rocm
+ENV PATH=$ROCM_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$ROCM_HOME/lib:$LD_LIBRARY_PATH
+
+# Clone the Intel LLVM repository
+RUN git clone https://github.com/intel/llvm.git -b sycl /llvm
+
+# Build the DPC++ toolchain with CUDA and HIP AMD support
+RUN mkdir -p /llvm/build && cd /llvm/build \
+    && cmake -G "Unix Makefiles" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DLLVM_ENABLE_PROJECTS="clang;llvm-spirv;sycl" \
+        -DLLVM_TARGETS_TO_BUILD="X86;NVPTX;AMDGPU" \
+        -DSYCL_BUILD_PI_CUDA=ON \
+        -DSYCL_BUILD_PI_HIP=ON \
+        -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda \
+        -DROCM_DIR=$ROCM_HOME \
+        ../llvm \
+    && make -j$(nproc)
+
+# Set environment variables for DPC++
+ENV DPCPP_HOME=/llvm/build
+ENV PATH=$DPCPP_HOME/bin:$PATH
+ENV LD_LIBRARY_PATH=$DPCPP_HOME/lib:$LD_LIBRARY_PATH
+
+# Verify installation
+RUN clang++ --version && clang++ -fsycl -fsycl-targets=nvptx64-nvidia-cuda-sycldevice --cuda-path=/usr/local/cuda --cuda-gpu-arch=sm_50 -x cuda -c /llvm/sycl/test/basic_tests/simple_kernel.cpp -o /dev/null
+RUN clang++ -fsycl -fsycl-targets=amdgcn-amd-amdhsa -x hip -c /llvm/sycl/test/basic_tests/simple_kernel.cpp -o /dev/null
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the project files
+COPY . .
+
+# Build and install the project
+RUN mkdir build && cd build && cmake .. && make && make install
+
+# Default command
+CMD ["/bin/bash"]

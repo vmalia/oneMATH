@@ -1,0 +1,72 @@
+services:
+  base:
+    build:
+      context: .
+      dockerfile: Dockerfile.base
+    environment:
+      - PATH=/llvm/build/bin:$PATH
+      - LD_LIBRARY_PATH=/llvm/build/lib:$LD_LIBRARY_PATH
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: /bin/bash
+
+  intel-llvm-rocm:
+    depends_on:
+      - base
+    build:
+      context: .
+      dockerfile: Dockerfile.rocm
+    environment:
+      - ROCM_HOME=/opt/rocm
+      - PATH=/opt/rocm/bin:/llvm/build/bin:$PATH
+      - LD_LIBRARY_PATH=/opt/rocm/lib:/llvm/build/lib:$LD_LIBRARY_PATH
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: /bin/bash
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  intel-llvm-cuda:
+    depends_on:
+      - base
+    build:
+      context: .
+      dockerfile: Dockerfile.cuda
+    environment:
+      - CUDA_HOME=/usr/local/cuda
+      - PATH=/usr/local/cuda/bin:/llvm/build/bin:$PATH
+      - LD_LIBRARY_PATH=/usr/local/cuda/lib64:/llvm/build/lib:$LD_LIBRARY_PATH
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: /bin/bash
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+
+  intel-dpcpp-oneapi:
+    depends_on:
+      - base
+    build:
+      context: .
+      dockerfile: Dockerfile.oneapi
+    environment:
+      - INTEL_ONEAPI_ROOT=/opt/intel/oneapi
+      - PATH=/opt/intel/oneapi/compiler/latest/linux/bin:$PATH
+      - LD_LIBRARY_PATH=/opt/intel/oneapi/compiler/latest/linux/lib:$LD_LIBRARY_PATH
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: /bin/bash
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]

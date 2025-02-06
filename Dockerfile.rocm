@@ -50,7 +50,7 @@ WORKDIR /app
 COPY . .
 
 # Build and install the project
-RUN mkdir build && cd build && cmake .. && make && make install
+RUN mkdir -p build && cd build && cmake .. && make -j$(nproc) && make install
 
 # Default command
 CMD ["/bin/bash"]

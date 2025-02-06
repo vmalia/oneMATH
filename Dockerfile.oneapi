@@ -1,4 +1,4 @@
-FROM intel/oneapi-basekit:2025.0.2-0-devel-ubuntu22.04
+FROM intel/oneapi-basekit:2025.0.0-0-devel-ubuntu22.04
 
 # Install common dependencies and netlib
 COPY --from=base:latest /usr /usr
@@ -18,4 +18,4 @@ WORKDIR /app
 COPY . .
 
 # Build and install the project
-RUN bash -c "source /opt/intel/oneapi/setvars.sh && mkdir build && cd build && cmake .. && make && make install"
+RUN bash -c "mkdir -p build && cd build && cmake .. && make -j$(nproc) && make install"

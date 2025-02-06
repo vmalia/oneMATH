@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     wget \
     git \
+    unzip \
     python3 \
     python3-pip \
     libnuma-dev \
@@ -21,17 +22,17 @@ ENV PATH=$CUDA_HOME/bin:$PATH
 ENV LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH
 
 # Clone the Intel LLVM repository
-RUN git clone https://github.com/intel/llvm.git -b sycl /llvm
+RUN wget https://github.com/intel/llvm/archive/refs/heads/sycl.zip && unzip sycl.zip
 
 # Build the DPC++ toolchain with CUDA support
-RUN mkdir -p /llvm/build && cd /llvm/build \
-    && cmake -G "Unix Makefiles" \
+RUN mkdir -p /llvm-sycl/build && cd /llvm-sycl/build \
+    && cmake \
         -DCMAKE_BUILD_TYPE=Release \
-        -DLLVM_ENABLE_PROJECTS="clang;llvm-spirv;sycl" \
+        -DLLVM_ENABLE_PROJECTS="clang;compiler-rt" \
         -DLLVM_TARGETS_TO_BUILD="X86;NVPTX" \
         -DSYCL_BUILD_PI_CUDA=ON \
         -DCUDA_TOOLKIT_ROOT_DIR=$CUDA_HOME \
-        ../llvm \
+        /llvm-sycl/llvm \
     && make -j$(nproc)
 
 # Set environment variables for DPC++
@@ -49,7 +50,7 @@ WORKDIR /app
 COPY . .
 
 # Build and install the project
-RUN mkdir build && cd build && cmake .. && make && make install
+RUN "mkdir -p build && cd build && cmake .. && make -j$(nproc) && make install"
 
 # Default command
 CMD ["/bin/bash"]

@@ -3,7 +3,7 @@
 # oneAPI Math Library (oneMath)
 
 [![OpenSSF
-Scorecard](https://api.securityscorecards.dev/projects/github.com/oneapi-src/oneMKL/badge)](https://securityscorecards.dev/viewer/?uri=github.com%2Fuxlfoundation%2FoneMath)
+Scorecard](https://api.securityscorecards.dev/projects/github.com/uxlfoundation/oneMath/badge)](https://securityscorecards.dev/viewer/?uri=github.com%2Fuxlfoundation%2FoneMath)
 
 oneMath is an open-source implementation of the [oneMath specification](https://oneapi-spec.uxlfoundation.org/specifications/oneapi/latest/elements/onemath/source/). It can work with multiple devices using multiple libraries (backends) underneath. The oneMath project was previously referred to as oneMKL Interfaces.
 

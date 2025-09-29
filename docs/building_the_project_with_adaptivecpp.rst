@@ -12,52 +12,52 @@ Environment Setup
    Build and install AdaptiveCpp. For a detailed description of available
    AdaptiveCpp backends, their dependencies, and installation, see the
    `AdaptiveCpp installation readme
-   <https://github.com/AdaptiveCpp/AdaptiveCpp/blob/develop/doc/installing.md#compilation-flows>`_.
+   <https://adaptivecpp.github.io/AdaptiveCpp/installing/>`_.
 
 #. 
    Clone this project. The root directory of the cloned repository will be
-   referred to as ``<path to onemkl>``.
+   referred to as ``<path to onemath>``.
 
 #. 
    Download and install the `required dependencies
-   <https://github.com/oneapi-src/oneMKL?tab=readme-ov-file#software-requirements>`_
+   <https://github.com/uxlfoundation/oneMath?tab=readme-ov-file#software-requirements>`_
    manually.
 
 Build Commands
 ###############
 
-In most cases, building oneMKL Interfaces is as simple as setting the compiler and
+In most cases, building oneMath is as simple as setting the compiler and
 selecting the desired backends to build with.
 
 On Linux (other OSes are not supported with the AdaptiveCpp compiler):
 
 .. code-block:: bash
 
-  # Inside <path to onemkl>
+  # Inside <path to onemath>
   mkdir build && cd build
-  cmake .. -DONEMKL_SYCL_IMPLEMENTATION=hipsycl    \ # Indicate that AdaptiveCpp is being used.
-          -DENABLE_MKLGPU_BACKEND=False            \ # MKLGPU backend is not supported by AdaptiveCpp
-          -DENABLE_<BACKEND_NAME>_BACKEND=True     \ # Enable backend(s) (optional)
-          -DENABLE_<BACKEND_NAME_2>_BACKEND=True   \ # Multiple backends can be enabled at once.
-          -DHIPSYCL_TARGETS=omp/;hip:gfx90a,gfx906 \ # Set target architectures depending on supported devices.
-          -DBUILD_FUNCTIONAL_TESTS=False           \ # See section *Building the tests* for more on building tests. True by default.
-          -DBUILD_EXAMPLES=False                   # Optional: True by default.
+  cmake .. -DONEMATH_SYCL_IMPLEMENTATION=adaptivecpp \ # Indicate that AdaptiveCpp is being used.
+          -DENABLE_MKLGPU_BACKEND=False              \ # MKLGPU backend is not supported by AdaptiveCpp
+          -DENABLE_<BACKEND_NAME>_BACKEND=True       \ # Enable backend(s) (optional)
+          -DENABLE_<BACKEND_NAME_2>_BACKEND=True     \ # Multiple backends can be enabled at once.
+          -DACPP_TARGETS=omp\;hip:gfx90a,gfx906      \ # Set target architectures depending on supported devices.
+          -DBUILD_FUNCTIONAL_TESTS=False             \ # See section *Building the tests* for more on building tests. True by default.
+          -DBUILD_EXAMPLES=False                     # Optional: True by default.
   cmake --build .
   cmake --install . --prefix <path_to_install_dir> # required to have full package structure
 
 Backends should be enabled by setting ``-DENABLE_<BACKEND_NAME>_BACKEND=True`` for
 each desired backend. By default, the ``MKLGPU`` and ``MKLCPU`` backends are
 enabled, but ``MKLGPU`` must be disabled with AdaptiveCpp. The supported
-backends for the compilers are given in the table at `oneMKL supported
+backends for the compilers are given in the table at `oneMath supported
 configurations table
-<https://github.com/oneapi-src/oneMKL?tab=readme-ov-file#supported-configurations>`_,
+<https://github.com/uxlfoundation/oneMath?tab=readme-ov-file#supported-configurations>`_,
 and the CMake option names are given in the table below. Some backends may
 require additional parameters to be set. See the relevant section below for
-additional guidance. The target architectures must be specified with
-``HIP_TARGETS``. See the `AdaptiveCpp documentation
-<https://github.com/AdaptiveCpp/AdaptiveCpp/blob/develop/doc/using-hipsycl.md#adaptivecpp-targets-specification>`_.
+additional guidance. The target architectures may be specified with ``ACPP_TARGETS``,
+otherwise the ``generic`` target is used. See the `AdaptiveCpp documentation
+<https://adaptivecpp.github.io/AdaptiveCpp/using-acpp/#adaptivecpp-targets-specification>`_.
 
-If a backend library supports multiple domains (i.e. BLAS, RNG), it may be
+If a backend library supports multiple domains (i.e. BLAS, DFT, RNG), it may be
 desirable to only enable selected domains. For this, the ``TARGET_DOMAINS``
 variable should be set. For further details, see :ref:`_build_target_domains`.
 
@@ -81,15 +81,24 @@ The most important supported build options are:
    * - ENABLE_CUBLAS_BACKEND
      - True, False
      - False     
+   * - ENABLE_CUFFT_BACKEND
+     - True, False
+     - False
    * - ENABLE_CURAND_BACKEND
      - True, False
      - False     
    * - ENABLE_NETLIB_BACKEND
      - True, False
      - False     
+   * - ENABLE_ARMPL_BACKEND
+     - True, False
+     - False
    * - ENABLE_ROCBLAS_BACKEND
      - True, False
      - False     
+   * - ENABLE_ROCFFT_BACKEND
+     - True, False
+     - False
    * - ENABLE_ROCRAND_BACKEND
      - True, False
      - False     
@@ -103,7 +112,7 @@ The most important supported build options are:
      - True, False
      - True      
    * - TARGET_DOMAINS (list)
-     - blas, rng
+     - blas, dft, rng
      - All supported domains
 
 Some additional build options are given in
@@ -117,17 +126,17 @@ Backends
 Building for CUDA
 ~~~~~~~~~~~~~~~~~
 
-The CUDA backends can be enabled with ``ENABLE_CUBLAS_BACKEND`` and
-``ENABLE_CURAND_BACKEND``.
+The CUDA backends can be enabled with ``ENABLE_CUBLAS_BACKEND``,
+``ENABLE_CUFFT_BACKEND`` and ``ENABLE_CURAND_BACKEND``.
 
-The target architecture must be set using the ``HIPSYCL_TARGETS`` parameter. For
+The target architecture may be specified using the ``ACPP_TARGETS`` parameter. For
 example, to target a Nvidia A100 (Ampere architecture), set
-``-DHIPSYCL_TARGETS=cuda:sm_80``, where the figure ``80`` corresponds to a CUDA
+``-DACPP_TARGETS=cuda:sm_80``, where the figure ``80`` corresponds to a CUDA
 compute capability of 8.0. The correspondence between compute capabilities and
 Nvidia GPU products is given on the `Nvidia website
 <https://developer.nvidia.com/cuda-gpus>`_. Multiple architectures can be
 enabled using a comma separated list. See the `AdaptiveCpp documentation
-<https://github.com/AdaptiveCpp/AdaptiveCpp/blob/develop/doc/using-hipsycl.md#adaptivecpp-targets-specification>`_.
+<https://adaptivecpp.github.io/AdaptiveCpp/using-acpp/#adaptivecpp-targets-specification>`_.
 
 No additional parameters are required for using CUDA libraries. In most cases,
 the CUDA libraries should be found automatically by CMake.
@@ -137,16 +146,16 @@ the CUDA libraries should be found automatically by CMake.
 Building for ROCm
 ~~~~~~~~~~~~~~~~~
 
-The ROCm backends can be enabled with ``ENABLE_ROCBLAS_BACKEND`` and
-``ENABLE_ROCRAND_BACKEND``.
+The ROCm backends can be enabled with ``ENABLE_ROCBLAS_BACKEND``,
+``ENABLE_ROCFFT_BACKEND`` and ``ENABLE_ROCRAND_BACKEND``.
 
-The target architecture must be set using the ``HIPSYCL_TARGETS`` parameter. See
+The target architecture may be specified using the ``ACPP_TARGETS`` parameter. See
 the `AdaptiveCpp documentation
-<https://github.com/AdaptiveCpp/AdaptiveCpp/blob/develop/doc/using-hipsycl.md#adaptivecpp-targets-specification>`_.
-For example, to target the MI200 series, set ``-DHIPSYCL_TARGETS=hip:gfx90a``.
+<https://adaptivecpp.github.io/AdaptiveCpp/using-acpp/#adaptivecpp-targets-specification>`_.
+For example, to target the MI200 series, set ``-DACPP_TARGETS=hip:gfx90a``.
 Multiple architectures can be enabled using a comma separated list. For example,
-``-DHIPSYCL_TARGETS=hip:gfx906,gfx90a``, and multiple APIs with a semicolon
-(``-DHIPSYCL_TARGETS=omp\;hip:gfx906,gfx90a``).
+``-DACPP_TARGETS=hip:gfx906,gfx90a``, and multiple APIs with a semicolon
+(``-DACPP_TARGETS=omp\;hip:gfx906,gfx90a``).
 
 For common AMD GPU architectures, see the :ref:`build_for_ROCM_dpcpp` in the
 DPC++ build guide.

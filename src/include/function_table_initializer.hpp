@@ -23,14 +23,14 @@
 #include <cstdint>
 #include <map>
 
-#include "oneapi/mkl/detail/backends_table.hpp"
-#include "oneapi/mkl/detail/exceptions.hpp"
+#include "oneapi/math/detail/backends_table.hpp"
+#include "oneapi/math/detail/exceptions.hpp"
 
 #define SPEC_VERSION 1
 
 #ifdef __linux__
 #include <dlfcn.h>
-#define LIB_TYPE                 void *
+#define LIB_TYPE                 void*
 #define GET_LIB_HANDLE(libname)  dlopen((libname), RTLD_LAZY | RTLD_GLOBAL)
 #define GET_FUNC(lib, fn)        dlsym(lib, (fn))
 #define FREE_LIB_HANDLE(libname) dlclose(libname)
@@ -45,10 +45,10 @@
 #endif
 
 namespace oneapi {
-namespace mkl {
+namespace math {
 namespace detail {
 
-template <oneapi::mkl::domain domain_id, typename function_table_t>
+template <oneapi::math::domain domain_id, typename function_table_t>
 class table_initializer {
     struct handle_deleter {
         using pointer = LIB_TYPE;
@@ -59,7 +59,7 @@ class table_initializer {
     using dlhandle = std::unique_ptr<LIB_TYPE, handle_deleter>;
 
 public:
-    function_table_t &operator[](std::pair<oneapi::mkl::device, sycl::queue> device_queue_pair) {
+    function_table_t& operator[](std::pair<oneapi::math::device, sycl::queue> device_queue_pair) {
         auto lib = tables.find(device_queue_pair.first);
         if (lib != tables.end())
             return lib->second;
@@ -67,7 +67,7 @@ public:
     }
 
 private:
-#if defined(ENABLE_PORTBLAS_BACKEND) || defined(ENABLE_PORTFFT_BACKEND)
+#if defined(ONEMATH_ENABLE_GENERIC_BLAS_BACKEND) || defined(ONEMATH_ENABLE_PORTFFT_BACKEND)
     static constexpr bool is_generic_device_supported = true;
 #else
     static constexpr bool is_generic_device_supported = false;
@@ -96,44 +96,44 @@ private:
     }
 #endif
 
-    function_table_t &add_table(oneapi::mkl::device key, sycl::queue &q) {
+    function_table_t& add_table(oneapi::math::device key, sycl::queue& q) {
         dlhandle handle;
         // check all available libraries for the key(device)
-        for (const char *libname : libraries[domain_id][key]) {
+        for (const char* libname : libraries[domain_id][key]) {
             handle = dlhandle{ ::GET_LIB_HANDLE(libname) };
             if (handle)
                 break;
         }
         if (!handle) {
-            if (!is_generic_device_supported && key == oneapi::mkl::device::generic_device) {
-                throw mkl::unsupported_device("", "", q.get_device());
+            if (!is_generic_device_supported && key == oneapi::math::device::generic_device) {
+                throw math::unsupported_device("", "", q.get_device());
             }
             else {
                 std::cerr << ERROR_MSG << '\n';
-                throw mkl::backend_not_found();
+                throw math::backend_not_found();
             }
         }
         auto t =
-            reinterpret_cast<function_table_t *>(::GET_FUNC(handle.get(), table_names[domain_id]));
+            reinterpret_cast<function_table_t*>(::GET_FUNC(handle.get(), table_names[domain_id]));
 
         if (!t) {
             std::cerr << ERROR_MSG << '\n';
-            throw mkl::function_not_found();
+            throw math::function_not_found();
         }
         if (t->version != SPEC_VERSION)
-            throw mkl::specification_mismatch();
+            throw math::specification_mismatch();
 
         handles[key] = std::move(handle);
         tables[key] = *t;
         return *t;
     }
 
-    std::map<oneapi::mkl::device, function_table_t> tables;
-    std::map<oneapi::mkl::device, dlhandle> handles;
+    std::map<oneapi::math::device, function_table_t> tables;
+    std::map<oneapi::math::device, dlhandle> handles;
 };
 
 } //namespace detail
-} // namespace mkl
+} // namespace math
 } // namespace oneapi
 
 #endif //_LOADER_HPP_

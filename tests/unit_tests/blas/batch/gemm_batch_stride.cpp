@@ -31,9 +31,9 @@
 #endif
 #include "allocator_helper.hpp"
 #include "cblas.h"
-#include "oneapi/mkl/detail/config.hpp"
-#include "oneapi/mkl.hpp"
-#include "onemkl_blas_helper.hpp"
+#include "oneapi/math/detail/config.hpp"
+#include "oneapi/math.hpp"
+#include "onemath_blas_helper.hpp"
 #include "reference_blas_templates.hpp"
 #include "test_common.hpp"
 #include "test_helper.hpp"
@@ -43,16 +43,16 @@
 using namespace sycl;
 using std::vector;
 
-extern std::vector<sycl::device *> devices;
+extern std::vector<sycl::device*> devices;
 
 namespace {
 
 template <typename Ta, typename Tb, typename Tc, typename Ts>
-int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
+int test(device* dev, oneapi::math::layout layout, int64_t batch_size) {
     // Prepare data.
     int64_t m, n, k;
     int64_t lda, ldb, ldc;
-    oneapi::mkl::transpose transa, transb;
+    oneapi::math::transpose transa, transb;
     Ts alpha, beta;
     int64_t i, tmp;
 
@@ -70,31 +70,31 @@ int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
         (std::is_same<Ts, std::complex<double>>::value)) {
         tmp = std::rand() % 3;
         if (tmp == 2)
-            transa = oneapi::mkl::transpose::conjtrans;
+            transa = oneapi::math::transpose::conjtrans;
         else
-            transa = (oneapi::mkl::transpose)tmp;
+            transa = (oneapi::math::transpose)tmp;
         tmp = std::rand() % 3;
         if (tmp == 2)
-            transb = oneapi::mkl::transpose::conjtrans;
+            transb = oneapi::math::transpose::conjtrans;
         else
-            transb = (oneapi::mkl::transpose)tmp;
+            transb = (oneapi::math::transpose)tmp;
     }
     else {
-        transa = (oneapi::mkl::transpose)(std::rand() % 2);
-        transb = (oneapi::mkl::transpose)(std::rand() % 2);
+        transa = (oneapi::math::transpose)(std::rand() % 2);
+        transb = (oneapi::math::transpose)(std::rand() % 2);
     }
 
     int64_t stride_a, stride_b, stride_c;
 
     switch (layout) {
-        case oneapi::mkl::layout::col_major:
-            stride_a = (transa == oneapi::mkl::transpose::nontrans) ? lda * k : lda * m;
-            stride_b = (transb == oneapi::mkl::transpose::nontrans) ? ldb * n : ldb * k;
+        case oneapi::math::layout::col_major:
+            stride_a = (transa == oneapi::math::transpose::nontrans) ? lda * k : lda * m;
+            stride_b = (transb == oneapi::math::transpose::nontrans) ? ldb * n : ldb * k;
             stride_c = ldc * n;
             break;
-        case oneapi::mkl::layout::row_major:
-            stride_a = (transa == oneapi::mkl::transpose::nontrans) ? lda * m : lda * k;
-            stride_b = (transb == oneapi::mkl::transpose::nontrans) ? ldb * k : ldb * n;
+        case oneapi::math::layout::row_major:
+            stride_a = (transa == oneapi::math::transpose::nontrans) ? lda * m : lda * k;
+            stride_b = (transb == oneapi::math::transpose::nontrans) ? ldb * k : ldb * n;
             stride_c = ldc * m;
             break;
         default: break;
@@ -110,7 +110,7 @@ int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
     for (i = 0; i < batch_size; i++) {
         rand_matrix(A.data() + stride_a * i, layout, transa, m, k, lda);
         rand_matrix(B.data() + stride_b * i, layout, transb, k, n, ldb);
-        rand_matrix(C.data() + stride_c * i, layout, oneapi::mkl::transpose::nontrans, m, n, ldc);
+        rand_matrix(C.data() + stride_c * i, layout, oneapi::math::transpose::nontrans, m, n, ldc);
     }
 
     for (size_t i = 0; i < A.size(); ++i) {
@@ -135,23 +135,22 @@ int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
 
     for (i = 0; i < batch_size_ref; i++) {
         ::gemm(convert_to_cblas_layout(layout), convert_to_cblas_trans(transa),
-               convert_to_cblas_trans(transb), (const int *)&m_ref, (const int *)&n_ref,
-               (const int *)&k_ref, (const fp_ref *)&alpha,
-               (const fp_ref *)(A_ref.data() + stride_a * i), (const int *)&lda_ref,
-               (const fp_ref *)(B_ref.data() + stride_b * i), (const int *)&ldb_ref,
-               (const fp_ref *)&beta, (fp_ref *)(C_ref.data() + stride_c * i),
-               (const int *)&ldc_ref);
+               convert_to_cblas_trans(transb), (const int*)&m_ref, (const int*)&n_ref,
+               (const int*)&k_ref, (const fp_ref*)&alpha,
+               (const fp_ref*)(A_ref.data() + stride_a * i), (const int*)&lda_ref,
+               (const fp_ref*)(B_ref.data() + stride_b * i), (const int*)&ldb_ref,
+               (const fp_ref*)&beta, (fp_ref*)(C_ref.data() + stride_c * i), (const int*)&ldc_ref);
     }
 
     // Call DPC++ GEMM_BATCH_STRIDE.
 
     // Catch asynchronous exceptions.
     auto exception_handler = [](exception_list exceptions) {
-        for (std::exception_ptr const &e : exceptions) {
+        for (std::exception_ptr const& e : exceptions) {
             try {
                 std::rethrow_exception(e);
             }
-            catch (exception const &e) {
+            catch (exception const& e) {
                 std::cout << "Caught asynchronous SYCL exception during GEMM_BATCH_STRIDE:\n"
                           << e.what() << std::endl;
                 print_error_code(e);
@@ -168,13 +167,13 @@ int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
     try {
 #ifdef CALL_RT_API
         switch (layout) {
-            case oneapi::mkl::layout::col_major:
-                oneapi::mkl::blas::column_major::gemm_batch(
+            case oneapi::math::layout::col_major:
+                oneapi::math::blas::column_major::gemm_batch(
                     main_queue, transa, transb, m, n, k, alpha, A_buffer, lda, stride_a, B_buffer,
                     ldb, stride_b, beta, C_buffer, ldc, stride_c, batch_size);
                 break;
-            case oneapi::mkl::layout::row_major:
-                oneapi::mkl::blas::row_major::gemm_batch(
+            case oneapi::math::layout::row_major:
+                oneapi::math::blas::row_major::gemm_batch(
                     main_queue, transa, transb, m, n, k, alpha, A_buffer, lda, stride_a, B_buffer,
                     ldb, stride_b, beta, C_buffer, ldc, stride_c, batch_size);
                 break;
@@ -182,14 +181,14 @@ int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
         }
 #else
         switch (layout) {
-            case oneapi::mkl::layout::col_major:
-                TEST_RUN_BLAS_CT_SELECT(main_queue, oneapi::mkl::blas::column_major::gemm_batch,
+            case oneapi::math::layout::col_major:
+                TEST_RUN_BLAS_CT_SELECT(main_queue, oneapi::math::blas::column_major::gemm_batch,
                                         transa, transb, m, n, k, alpha, A_buffer, lda, stride_a,
                                         B_buffer, ldb, stride_b, beta, C_buffer, ldc, stride_c,
                                         batch_size);
                 break;
-            case oneapi::mkl::layout::row_major:
-                TEST_RUN_BLAS_CT_SELECT(main_queue, oneapi::mkl::blas::row_major::gemm_batch,
+            case oneapi::math::layout::row_major:
+                TEST_RUN_BLAS_CT_SELECT(main_queue, oneapi::math::blas::row_major::gemm_batch,
                                         transa, transb, m, n, k, alpha, A_buffer, lda, stride_a,
                                         B_buffer, ldb, stride_b, beta, C_buffer, ldc, stride_c,
                                         batch_size);
@@ -199,17 +198,17 @@ int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
 #endif
         main_queue.wait_and_throw();
     }
-    catch (exception const &e) {
+    catch (exception const& e) {
         std::cout << "Caught synchronous SYCL exception during GEMM_BATCH_STRIDE:\n"
                   << e.what() << std::endl;
         print_error_code(e);
     }
 
-    catch (const oneapi::mkl::unimplemented &e) {
+    catch (const oneapi::math::unimplemented& e) {
         return test_skipped;
     }
 
-    catch (const std::runtime_error &error) {
+    catch (const std::runtime_error& error) {
         std::cout << "Error raised during execution of GEMM_BATCH_STRIDE:\n"
                   << error.what() << std::endl;
     }
@@ -224,7 +223,7 @@ int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
         C_cast_ref[i] = C_ref[i];
     }
     auto C_accessor = C_buffer.get_host_access(read_only);
-    bool good = check_almost_equal_matrix(C_accessor, C_cast_ref, oneapi::mkl::layout::col_major,
+    bool good = check_almost_equal_matrix(C_accessor, C_cast_ref, oneapi::math::layout::col_major,
                                           stride_c * batch_size, 1, stride_c * batch_size,
                                           error_mag, std::cout);
 
@@ -232,7 +231,7 @@ int test(device *dev, oneapi::mkl::layout layout, int64_t batch_size) {
 }
 
 class GemmBatchStrideTests
-        : public ::testing::TestWithParam<std::tuple<sycl::device *, oneapi::mkl::layout>> {};
+        : public ::testing::TestWithParam<std::tuple<sycl::device*, oneapi::math::layout>> {};
 
 TEST_P(GemmBatchStrideTests, RealHalfPrecision) {
     EXPECT_TRUEORSKIP((test<sycl::half, sycl::half, sycl::half, sycl::half>(
@@ -282,8 +281,8 @@ TEST_P(GemmBatchStrideTests, ComplexDoublePrecision) {
 
 INSTANTIATE_TEST_SUITE_P(GemmBatchStrideTestSuite, GemmBatchStrideTests,
                          ::testing::Combine(testing::ValuesIn(devices),
-                                            testing::Values(oneapi::mkl::layout::col_major,
-                                                            oneapi::mkl::layout::row_major)),
+                                            testing::Values(oneapi::math::layout::col_major,
+                                                            oneapi::math::layout::row_major)),
                          ::LayoutDeviceNamePrint());
 
 } // anonymous namespace

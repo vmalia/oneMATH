@@ -23,12 +23,12 @@ following:
 
   git clone https://github.com/Reference-LAPACK/lapack.git 
   cd lapack; mkdir -p build; cd build 
-  cmake -DCMAKE_INSTALL_PREFIX=~/lapack -DCBLAS=True -DLAPACK=True -DLAPACKE=True -DBUILD_INDEX64=True -DBUILD_SHARED_LIBS=True .. 
+  cmake -DCMAKE_INSTALL_PREFIX=~/lapack -DCBLAS=True -DLAPACK=True -DLAPACKE=True -DBUILD_INDEX64=True -DBUILD_SHARED_LIBS=True ..
   cmake --build . -j --target install 
-  cmake -DCMAKE_INSTALL_PREFIX=~/lapack -DCBLAS=True -DLAPACK=True -DLAPACKE=True -DBUILD_INDEX64=False -DBUILD_SHARED_LIBS=True .. 
+  cmake -DCMAKE_INSTALL_PREFIX=~/lapack -DCBLAS=True -DLAPACK=True -DLAPACKE=True -DBUILD_INDEX64=False -DBUILD_SHARED_LIBS=True ..
   cmake --build . -j --target install
 
-and then used in oneMKL by setting ``-REF_BLAS_ROOT=/path/to/lapack/install``
+and then used in oneMath by setting ``-DREF_BLAS_ROOT=/path/to/lapack/install``
 and ``-DREF_LAPACK_ROOT=/path/to/lapack/install``.
 
 You can re-run tests without re-building the entire project.

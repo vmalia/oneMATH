@@ -19,11 +19,14 @@
 
 # Add compile definitions for the reference libraries
 add_compile_definitions(
-  REF_BLAS_LIBNAME="${REF_BLAS_LIBNAME}"
-  REF_CBLAS_LIBNAME="${REF_CBLAS_LIBNAME}")
+  ONEMATH_REF_BLAS_LIBNAME="${ONEMATH_REF_BLAS_LIBNAME}"
+  ONEMATH_REF_CBLAS_LIBNAME="${ONEMATH_REF_CBLAS_LIBNAME}")
 
 add_subdirectory(level1)
 add_subdirectory(level2)
 add_subdirectory(level3)
 add_subdirectory(batch)
 add_subdirectory(extensions)
+if(${ONEMATH_SYCL_IMPLEMENTATION} STREQUAL "dpc++")
+  add_subdirectory(sycl-graph)
+endif()

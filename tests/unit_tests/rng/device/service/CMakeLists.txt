@@ -18,7 +18,7 @@
 #===============================================================================
 
 # Build object from all test sources
-set(SERVICE_DEVICE_TESTS_SOURCES "skip_ahead.cpp")
+set(SERVICE_DEVICE_TESTS_SOURCES "skip_ahead.cpp" "count_adaptor.cpp")
 
 add_library(rng_device_service_ct OBJECT ${SERVICE_DEVICE_TESTS_SOURCES})
 target_compile_options(rng_device_service_ct PRIVATE -DNOMINMAX)
@@ -32,9 +32,9 @@ target_include_directories(rng_device_service_ct
 if (USE_ADD_SYCL_TO_TARGET_INTEGRATION)
   add_sycl_to_target(TARGET rng_device_service_ct SOURCES ${SERVICE_DEVICE_TESTS_SOURCES})
 else()
-  target_link_libraries(rng_device_service_ct PUBLIC ONEMKL::SYCL::SYCL)
+  target_link_libraries(rng_device_service_ct PUBLIC ONEMATH::SYCL::SYCL)
 endif()
 
-if(NOT ${ONEMKL_SYCL_IMPLEMENTATION} STREQUAL "hipsycl")
+if(NOT ${ONEMATH_SYCL_IMPLEMENTATION} STREQUAL "adaptivecpp")
   target_link_options(rng_device_service_ct PUBLIC -fsycl -fsycl-device-code-split=per_kernel)
 endif()

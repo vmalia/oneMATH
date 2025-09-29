@@ -25,8 +25,8 @@
 #endif
 #include <string>
 #include "test_helper.hpp"
-#include "oneapi/mkl/detail/config.hpp"
-#include "oneapi/mkl.hpp"
+#include "oneapi/math/detail/config.hpp"
+#include "oneapi/math.hpp"
 
 #define MAX_STR 128
 
@@ -82,7 +82,7 @@ private:
 } // anonymous namespace
 
 void print_error_code(sycl::exception const& e) {
-#ifdef __HIPSYCL__
+#ifdef __ADAPTIVECPP__
     std::cout << "Backend status: " << e.code() << std::endl;
 #else
     std::cout << "OpenCL status: " << e.code() << std::endl;
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
 
     auto platforms = sycl::platform::get_platforms();
     for (auto plat : platforms) {
-#ifdef __HIPSYCL__
+#ifdef __ADAPTIVECPP__
         if (!plat.is_host()) {
 #endif
             auto plat_devs = plat.get_devices();
@@ -112,30 +112,37 @@ int main(int argc, char** argv) {
                     if (unique_devices.find(dev.get_info<sycl::info::device::name>()) ==
                         unique_devices.end()) {
                         unique_devices.insert(dev.get_info<sycl::info::device::name>());
-#if !defined(ENABLE_MKLCPU_BACKEND) && !defined(ENABLE_PORTBLAS_BACKEND_INTEL_CPU) && \
-    !defined(ENABLE_PORTFFT_BACKEND) && !defined(ENABLE_NETLIB_BACKEND)
+#if !defined(ONEMATH_ENABLE_MKLCPU_BACKEND) &&                                             \
+    !defined(ONEMATH_ENABLE_GENERIC_BLAS_BACKEND_INTEL_CPU) &&                             \
+    !defined(ONEMATH_ENABLE_PORTFFT_BACKEND) && !defined(ONEMATH_ENABLE_NETLIB_BACKEND) && \
+    !defined(ONEMATH_ENABLE_ARMPL_BACKEND)
                         if (dev.is_cpu())
                             continue;
 #endif
-#if !defined(ENABLE_MKLGPU_BACKEND) && !defined(ENABLE_PORTBLAS_BACKEND_INTEL_GPU) && \
-    !defined(ENABLE_PORTFFT_BACKEND)
+#if !defined(ONEMATH_ENABLE_MKLGPU_BACKEND) &&                 \
+    !defined(ONEMATH_ENABLE_GENERIC_BLAS_BACKEND_INTEL_GPU) && \
+    !defined(ONEMATH_ENABLE_PORTFFT_BACKEND)
                         if (dev.is_gpu() && vendor_id == INTEL_ID)
                             continue;
 #endif
-#if !defined(ENABLE_CUBLAS_BACKEND) && !defined(ENABLE_CURAND_BACKEND) &&                \
-    !defined(ENABLE_CUSOLVER_BACKEND) && !defined(ENABLE_PORTBLAS_BACKEND_NVIDIA_GPU) && \
-    !defined(ENABLE_CUFFT_BACKEND) && !defined(ENABLE_PORTFFT_BACKEND)
+#if !defined(ONEMATH_ENABLE_CUBLAS_BACKEND) && !defined(ONEMATH_ENABLE_CURAND_BACKEND) && \
+    !defined(ONEMATH_ENABLE_CUSOLVER_BACKEND) &&                                          \
+    !defined(ONEMATH_ENABLE_GENERIC_BLAS_BACKEND_NVIDIA_GPU) &&                           \
+    !defined(ONEMATH_ENABLE_CUFFT_BACKEND) && !defined(ONEMATH_ENABLE_PORTFFT_BACKEND) && \
+    !defined(ONEMATH_ENABLE_CUSPARSE_BACKEND)
                         if (dev.is_gpu() && vendor_id == NVIDIA_ID)
                             continue;
 #endif
-#if !defined(ENABLE_ROCBLAS_BACKEND) && !defined(ENABLE_ROCRAND_BACKEND) &&            \
-    !defined(ENABLE_ROCSOLVER_BACKEND) && !defined(ENABLE_PORTBLAS_BACKEND_AMD_GPU) && \
-    !defined(ENABLE_ROCFFT_BACKEND) && !defined(ENABLE_PORTFFT_BACKEND)
+#if !defined(ONEMATH_ENABLE_ROCBLAS_BACKEND) && !defined(ONEMATH_ENABLE_ROCRAND_BACKEND) && \
+    !defined(ONEMATH_ENABLE_ROCSOLVER_BACKEND) &&                                           \
+    !defined(ONEMATH_ENABLE_GENERIC_BLAS_BACKEND_AMD_GPU) &&                                \
+    !defined(ONEMATH_ENABLE_ROCFFT_BACKEND) && !defined(ONEMATH_ENABLE_PORTFFT_BACKEND) &&  \
+    !defined(ONEMATH_ENABLE_ROCSPARSE_BACKEND)
                         if (dev.is_gpu() && vendor_id == AMD_ID)
                             continue;
 #endif
-// clang-format off
-#ifdef __HIPSYCL__
+                        // clang-format off
+#ifdef __ADAPTIVECPP__
                         if (dev.is_accelerator())
 #else
                         if (!dev.is_accelerator())
@@ -148,7 +155,7 @@ int main(int argc, char** argv) {
                     std::cout << "Exception while accessing device: " << e.what() << "\n";
                 }
             }
-#ifdef __HIPSYCL__
+#ifdef __ADAPTIVECPP__
         }
 #endif
     }

@@ -42,8 +42,8 @@
 // After Plugin Interface removal in DPC++ ur.hpp is the new include
 #if __has_include(<sycl/detail/ur.hpp>)
 #include <sycl/detail/ur.hpp>
-#ifndef ONEAPI_ONEMKL_PI_INTERFACE_REMOVED
-#define ONEAPI_ONEMKL_PI_INTERFACE_REMOVED
+#ifndef ONEMATH_PI_INTERFACE_REMOVED
+#define ONEMATH_PI_INTERFACE_REMOVED
 #endif
 #elif __has_include(<sycl/detail/pi.hpp>)
 #include <sycl/detail/pi.hpp>
@@ -52,7 +52,7 @@
 #endif
 
 namespace oneapi {
-namespace mkl {
+namespace math {
 namespace lapack {
 namespace cusolver {
 
@@ -71,7 +71,7 @@ https://docs.nvidia.com/cuda/cusolver/index.html#thread-safety
  using the same host thread.
 
 The advice above is for using cublas with the cuda runtime API. Given that cusolver is based on cublas the advice is 
-transferable. The cusolver_scope_handle is based on the oneMKL cublas_scope_handle. The NVIDIA runtime API creates a 
+transferable. The cusolver_scope_handle is based on the oneMath cublas_scope_handle. The NVIDIA runtime API creates a 
 default context for users. The cusolverDnCreate function in uses the context located on top of the stack for each thread. 
 Then, the cuSolver routine uses this context for resource allocation/access. Calling a cuSolver function with a handle 
 created for context A and memories/queue created for context B results in a segmentation fault. Thus we need to create 
@@ -89,19 +89,19 @@ cuSolver handle to the SYCL context.
 
 class CusolverScopedContextHandler {
     CUcontext original_;
-    sycl::context *placedContext_;
+    sycl::context* placedContext_;
     bool needToRecover_;
-    sycl::interop_handle &ih;
-#ifdef ONEAPI_ONEMKL_PI_INTERFACE_REMOVED
+    sycl::interop_handle& ih;
+#ifdef ONEMATH_PI_INTERFACE_REMOVED
     static thread_local cusolver_handle<ur_context_handle_t> handle_helper;
 #else
     static thread_local cusolver_handle<pi_context> handle_helper;
 #endif
-    CUstream get_stream(const sycl::queue &queue);
-    sycl::context get_context(const sycl::queue &queue);
+    CUstream get_stream(const sycl::queue& queue);
+    sycl::context get_context(const sycl::queue& queue);
 
 public:
-    CusolverScopedContextHandler(sycl::queue queue, sycl::interop_handle &ih);
+    CusolverScopedContextHandler(sycl::queue queue, sycl::interop_handle& ih);
 
     ~CusolverScopedContextHandler() noexcept(false);
     /**
@@ -111,7 +111,7 @@ public:
    * @param queue sycl queue.
    * @return cusolverDnHandle_t a handle to construct cusolver routines
    */
-    cusolverDnHandle_t get_handle(const sycl::queue &queue);
+    cusolverDnHandle_t get_handle(const sycl::queue& queue);
     // This is a work-around function for reinterpret_casting the memory. This
     // will be fixed when SYCL-2020 has been implemented for Pi backend.
     template <typename T, typename U>
@@ -120,13 +120,13 @@ public:
         return reinterpret_cast<T>(cudaPtr);
     }
 
-    void wait_stream(const sycl::queue &queue) {
+    void wait_stream(const sycl::queue& queue) {
         cuStreamSynchronize(get_stream(queue));
     }
 };
 
 } // namespace cusolver
 } // namespace lapack
-} // namespace mkl
+} // namespace math
 } // namespace oneapi
 #endif //_CUSOLVER_SCOPED_HANDLE_HPP_

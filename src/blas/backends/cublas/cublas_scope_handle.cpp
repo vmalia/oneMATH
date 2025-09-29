@@ -17,14 +17,9 @@
 *
 **************************************************************************/
 #include "cublas_scope_handle.hpp"
-#if __has_include(<sycl/detail/common.hpp>)
-#include <sycl/detail/common.hpp>
-#else
-#include <CL/sycl/detail/common.hpp>
-#endif
 
 namespace oneapi {
-namespace mkl {
+namespace math {
 namespace blas {
 namespace cublas {
 
@@ -35,118 +30,84 @@ namespace cublas {
  * takes place if no other element in the container has a key equivalent to
  * the one being emplaced (keys in a map container are unique).
  */
-#ifdef ONEAPI_ONEMKL_PI_INTERFACE_REMOVED
-thread_local cublas_handle<ur_context_handle_t> CublasScopedContextHandler::handle_helper =
-    cublas_handle<ur_context_handle_t>{};
-#else
-thread_local cublas_handle<pi_context> CublasScopedContextHandler::handle_helper =
-    cublas_handle<pi_context>{};
-#endif
+thread_local cublas_handle CublasScopedContextHandler::handle_helper = cublas_handle{};
 
-CublasScopedContextHandler::CublasScopedContextHandler(sycl::queue queue, sycl::interop_handle &ih)
-        : ih(ih),
-          needToRecover_(false) {
-    placedContext_ = new sycl::context(queue.get_context());
-    auto cudaDevice = ih.get_native_device<sycl::backend::ext_oneapi_cuda>();
-    CUresult err;
-    CUcontext desired;
-    CUDA_ERROR_FUNC(cuCtxGetCurrent, err, &original_);
-    CUDA_ERROR_FUNC(cuDevicePrimaryCtxRetain, err, &desired, cudaDevice);
-    if (original_ != desired) {
-        // Sets the desired context as the active one for the thread
-        CUDA_ERROR_FUNC(cuCtxSetCurrent, err, desired);
-        // No context is installed and the suggested context is primary
-        // This is the most common case. We can activate the context in the
-        // thread and leave it there until all the PI context referring to the
-        // same underlying CUDA primary context are destroyed. This emulates
-        // the behaviour of the CUDA runtime api, and avoids costly context
-        // switches. No action is required on this side of the if.
-        needToRecover_ = !(original_ == nullptr);
-    }
-}
+CublasScopedContextHandler::CublasScopedContextHandler(sycl::interop_handle& ih) : ih(ih) {
+    // Initialize streamID member to a CUstream associated with the queue `ih`
+    // has been submitted to.
+    streamId = ih.get_native_queue<sycl::backend::ext_oneapi_cuda>();
 
-CublasScopedContextHandler::~CublasScopedContextHandler() noexcept(false) {
-    if (needToRecover_) {
-        CUresult err;
-        CUDA_ERROR_FUNC(cuCtxSetCurrent, err, original_);
-    }
-    delete placedContext_;
-}
-
-void ContextCallback(void *userData) {
-    auto *ptr = static_cast<std::atomic<cublasHandle_t> *>(userData);
-    if (!ptr) {
-        return;
-    }
-    auto handle = ptr->exchange(nullptr);
-    if (handle != nullptr) {
-        cublasStatus_t err1;
-        CUBLAS_ERROR_FUNC(cublasDestroy, err1, handle);
-        handle = nullptr;
+    // Initialize the `cublasHandle_t` member `nativeHandle`
+    CUdevice device = ih.get_native_device<sycl::backend::ext_oneapi_cuda>();
+    auto it = handle_helper.cublas_handle_mapper_.find(device);
+    if (it != handle_helper.cublas_handle_mapper_.end()) {
+        // Use existing handle if one already exists for the device, but update
+        // the native stream.
+        nativeHandle = it->second;
+        cudaStream_t currentStreamId;
+        cublasStatus_t err;
+        CUBLAS_ERROR_FUNC(cublasGetStream, err, nativeHandle, &currentStreamId);
+        if (currentStreamId != streamId) {
+            CUBLAS_ERROR_FUNC(cublasSetStream, err, nativeHandle, streamId);
+        }
     }
     else {
-        // if the handle is nullptr it means the handle was already destroyed by
-        // the cublas_handle destructor and we're free to delete the atomic
-        // object.
-        delete ptr;
+        // Create a new handle if one doesn't already exist for the device
+        cublasStatus_t err;
+        CUBLAS_ERROR_FUNC(cublasCreate, err, &nativeHandle);
+        CUBLAS_ERROR_FUNC(cublasSetStream, err, nativeHandle, streamId);
+        handle_helper.cublas_handle_mapper_.insert(std::make_pair(device, nativeHandle));
     }
 }
 
-cublasHandle_t CublasScopedContextHandler::get_handle(const sycl::queue &queue) {
-    auto cudaDevice = ih.get_native_device<sycl::backend::ext_oneapi_cuda>();
-    CUresult cuErr;
-    CUcontext desired;
-    CUDA_ERROR_FUNC(cuDevicePrimaryCtxRetain, cuErr, &desired, cudaDevice);
-#ifdef ONEAPI_ONEMKL_PI_INTERFACE_REMOVED
-    auto piPlacedContext_ = reinterpret_cast<ur_context_handle_t>(desired);
+void CublasScopedContextHandler::begin_recording_if_graph() {
+// interop_handle graph methods only available from extension version 2
+#if SYCL_EXT_ONEAPI_ENQUEUE_NATIVE_COMMAND >= 2
+    if (!ih.ext_codeplay_has_graph()) {
+        return;
+    }
+
+    CUresult err;
+#if CUDA_VERSION >= 12030
+    // After CUDA 12.3 we can use cuStreamBeginCaptureToGraph to capture
+    // the stream directly in the native graph, rather than needing to
+    // instantiate the stream capture as a new graph.
+    auto graph = ih.ext_codeplay_get_native_graph<sycl::backend::ext_oneapi_cuda>();
+    CUDA_ERROR_FUNC(cuStreamBeginCaptureToGraph, err, streamId, graph, nullptr, nullptr, 0,
+                    CU_STREAM_CAPTURE_MODE_GLOBAL);
 #else
-    auto piPlacedContext_ = reinterpret_cast<pi_context>(desired);
-#endif
-    CUstream streamId = get_stream(queue);
-    cublasStatus_t err;
-    auto it = handle_helper.cublas_handle_mapper_.find(piPlacedContext_);
-    if (it != handle_helper.cublas_handle_mapper_.end()) {
-        if (it->second == nullptr) {
-            handle_helper.cublas_handle_mapper_.erase(it);
-        }
-        else {
-            auto handle = it->second->load();
-            if (handle != nullptr) {
-                cudaStream_t currentStreamId;
-                CUBLAS_ERROR_FUNC(cublasGetStream, err, handle, &currentStreamId);
-                if (currentStreamId != streamId) {
-                    CUBLAS_ERROR_FUNC(cublasSetStream, err, handle, streamId);
-                }
-                return handle;
-            }
-            else {
-                handle_helper.cublas_handle_mapper_.erase(it);
-            }
-        }
+    CUDA_ERROR_FUNC(cuStreamBeginCapture, err, streamId, CU_STREAM_CAPTURE_MODE_GLOBAL);
+#endif // CUDA_VERSION
+#endif // SYCL_EXT_ONEAPI_ENQUEUE_NATIVE_COMMAND >= 2
+}
+
+void CublasScopedContextHandler::end_recording_if_graph() {
+// interop_handle graph methods only available from extension version 2
+#if SYCL_EXT_ONEAPI_ENQUEUE_NATIVE_COMMAND >= 2
+    if (!ih.ext_codeplay_has_graph()) {
+        return;
     }
 
-    cublasHandle_t handle;
+    auto graph = ih.ext_codeplay_get_native_graph<sycl::backend::ext_oneapi_cuda>();
+    CUresult err;
+#if CUDA_VERSION >= 12030
+    CUDA_ERROR_FUNC(cuStreamEndCapture, err, streamId, &graph);
+#else
+    // cuStreamEndCapture returns a new graph, if we overwrite
+    // "graph" it won't be picked up by the SYCL runtime, as
+    // "ext_codeplay_get_native_graph" returns a passed-by-value pointer.
+    CUgraph recorded_graph;
+    CUDA_ERROR_FUNC(cuStreamEndCapture, err, streamId, &recorded_graph);
 
-    CUBLAS_ERROR_FUNC(cublasCreate, err, &handle);
-    CUBLAS_ERROR_FUNC(cublasSetStream, err, handle, streamId);
-
-    auto insert_iter = handle_helper.cublas_handle_mapper_.insert(
-        std::make_pair(piPlacedContext_, new std::atomic<cublasHandle_t>(handle)));
-
-    sycl::detail::pi::contextSetExtendedDeleter(*placedContext_, ContextCallback,
-                                                insert_iter.first->second);
-
-    return handle;
+    // Add graph to native graph as a child node
+    // Need to return a node object for the node to be created,
+    // can't be nullptr.
+    CUgraphNode node;
+    CUDA_ERROR_FUNC(cuGraphAddChildGraphNode, err, &node, graph, nullptr, 0, recorded_graph);
+#endif // CUDA_VERSION
+#endif // SYCL_EXT_ONEAPI_ENQUEUE_NATIVE_COMMAND >= 2
 }
-
-CUstream CublasScopedContextHandler::get_stream(const sycl::queue &queue) {
-    return sycl::get_native<sycl::backend::ext_oneapi_cuda>(queue);
-}
-sycl::context CublasScopedContextHandler::get_context(const sycl::queue &queue) {
-    return queue.get_context();
-}
-
 } // namespace cublas
 } // namespace blas
-} // namespace mkl
+} // namespace math
 } // namespace oneapi

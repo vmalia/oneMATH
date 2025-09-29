@@ -17,17 +17,17 @@
 *
 **************************************************************************/
 
-#ifndef ONEMKL_COMPUTE_INPLACE_REAL_REAL_HPP
-#define ONEMKL_COMPUTE_INPLACE_REAL_REAL_HPP
+#ifndef ONEMATH_COMPUTE_INPLACE_REAL_REAL_HPP
+#define ONEMATH_COMPUTE_INPLACE_REAL_REAL_HPP
 
 #include "compute_tester.hpp"
 
-template <oneapi::mkl::dft::precision precision, oneapi::mkl::dft::domain domain>
+template <oneapi::math::dft::precision precision, oneapi::math::dft::domain domain>
 int DFT_Test<precision, domain>::test_in_place_real_real_USM() {
     if (!init(MemoryAccessModel::usm)) {
         return test_skipped;
     }
-    if constexpr (domain == oneapi::mkl::dft::domain::REAL) {
+    if constexpr (domain == oneapi::math::dft::domain::REAL) {
         std::cout << "skipping real split tests as they are not supported" << std::endl;
 
         return test_skipped;
@@ -35,16 +35,25 @@ int DFT_Test<precision, domain>::test_in_place_real_real_USM() {
     else {
         descriptor_t descriptor{ sizes };
         PrecisionType backward_scale = 1.f / static_cast<PrecisionType>(forward_elements);
-        descriptor.set_value(oneapi::mkl::dft::config_param::PLACEMENT,
-                             oneapi::mkl::dft::config_value::INPLACE);
-        descriptor.set_value(oneapi::mkl::dft::config_param::COMPLEX_STORAGE,
-                             oneapi::mkl::dft::config_value::REAL_REAL);
-        descriptor.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, batches);
-        descriptor.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, forward_elements);
-        descriptor.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, forward_elements);
-        descriptor.set_value(oneapi::mkl::dft::config_param::BACKWARD_SCALE, backward_scale);
+        bool scale_at_check = false;
+        descriptor.set_value(oneapi::math::dft::config_param::PLACEMENT,
+                             oneapi::math::dft::config_value::INPLACE);
+        descriptor.set_value(oneapi::math::dft::config_param::COMPLEX_STORAGE,
+                             oneapi::math::dft::config_value::REAL_REAL);
+        descriptor.set_value(oneapi::math::dft::config_param::NUMBER_OF_TRANSFORMS, batches);
+        descriptor.set_value(oneapi::math::dft::config_param::FWD_DISTANCE, forward_elements);
+        descriptor.set_value(oneapi::math::dft::config_param::BWD_DISTANCE, forward_elements);
+        descriptor.set_value(oneapi::math::dft::config_param::BACKWARD_SCALE, backward_scale);
 
-        commit_descriptor(descriptor, sycl_queue);
+        try {
+            commit_descriptor(descriptor, sycl_queue);
+        }
+        catch (oneapi::math::unimplemented&) {
+            //BACKWARD_SCALE not supported, go with 1 and scale at check
+            descriptor.set_value(oneapi::math::dft::config_param::BACKWARD_SCALE, 1.f);
+            commit_descriptor(descriptor, sycl_queue);
+            scale_at_check = true;
+        }
 
         auto ua_input = usm_allocator_t<PrecisionType>(cxt, *dev);
 
@@ -54,7 +63,7 @@ int DFT_Test<precision, domain>::test_in_place_real_real_USM() {
         std::copy(input_im.begin(), input_im.end(), inout_im.begin());
 
         std::vector<sycl::event> no_dependencies;
-        oneapi::mkl::dft::compute_forward<descriptor_t, PrecisionType>(
+        oneapi::math::dft::compute_forward<descriptor_t, PrecisionType>(
             descriptor, inout_re.data(), inout_im.data(), no_dependencies)
             .wait_and_throw();
 
@@ -65,14 +74,18 @@ int DFT_Test<precision, domain>::test_in_place_real_real_USM() {
         EXPECT_TRUE(check_equal_vector(output_data.data(), out_host_ref.data(), output_data.size(),
                                        abs_error_margin, rel_error_margin, std::cout));
 
-        oneapi::mkl::dft::compute_backward<std::remove_reference_t<decltype(descriptor)>,
-                                           PrecisionType>(descriptor, inout_re.data(),
-                                                          inout_im.data(), no_dependencies)
+        oneapi::math::dft::compute_backward<std::remove_reference_t<decltype(descriptor)>,
+                                            PrecisionType>(descriptor, inout_re.data(),
+                                                           inout_im.data(), no_dependencies)
             .wait_and_throw();
 
         for (std::size_t i = 0; i < output_data.size(); ++i) {
             output_data[i] = { inout_re[i], inout_im[i] };
         }
+        // account for scaling that occurs during DFT
+        if (scale_at_check)
+            std::for_each(input.begin(), input.end(),
+                          [this](auto& x) { x *= static_cast<PrecisionType>(forward_elements); });
 
         EXPECT_TRUE(check_equal_vector(output_data.data(), input.data(), input.size(),
                                        abs_error_margin, rel_error_margin, std::cout));
@@ -81,13 +94,13 @@ int DFT_Test<precision, domain>::test_in_place_real_real_USM() {
     }
 }
 
-template <oneapi::mkl::dft::precision precision, oneapi::mkl::dft::domain domain>
+template <oneapi::math::dft::precision precision, oneapi::math::dft::domain domain>
 int DFT_Test<precision, domain>::test_in_place_real_real_buffer() {
     if (!init(MemoryAccessModel::buffer)) {
         return test_skipped;
     }
 
-    if constexpr (domain == oneapi::mkl::dft::domain::REAL) {
+    if constexpr (domain == oneapi::math::dft::domain::REAL) {
         std::cout << "skipping real split tests as they are not supported" << std::endl;
 
         return test_skipped;
@@ -96,16 +109,24 @@ int DFT_Test<precision, domain>::test_in_place_real_real_buffer() {
         descriptor_t descriptor{ sizes };
 
         PrecisionType backward_scale = 1.f / static_cast<PrecisionType>(forward_elements);
-        descriptor.set_value(oneapi::mkl::dft::config_param::PLACEMENT,
-                             oneapi::mkl::dft::config_value::INPLACE);
-        descriptor.set_value(oneapi::mkl::dft::config_param::COMPLEX_STORAGE,
-                             oneapi::mkl::dft::config_value::REAL_REAL);
-        descriptor.set_value(oneapi::mkl::dft::config_param::NUMBER_OF_TRANSFORMS, batches);
-        descriptor.set_value(oneapi::mkl::dft::config_param::FWD_DISTANCE, forward_elements);
-        descriptor.set_value(oneapi::mkl::dft::config_param::BWD_DISTANCE, forward_elements);
-        descriptor.set_value(oneapi::mkl::dft::config_param::BACKWARD_SCALE, backward_scale);
-
-        commit_descriptor(descriptor, sycl_queue);
+        bool scale_at_check = false;
+        descriptor.set_value(oneapi::math::dft::config_param::PLACEMENT,
+                             oneapi::math::dft::config_value::INPLACE);
+        descriptor.set_value(oneapi::math::dft::config_param::COMPLEX_STORAGE,
+                             oneapi::math::dft::config_value::REAL_REAL);
+        descriptor.set_value(oneapi::math::dft::config_param::NUMBER_OF_TRANSFORMS, batches);
+        descriptor.set_value(oneapi::math::dft::config_param::FWD_DISTANCE, forward_elements);
+        descriptor.set_value(oneapi::math::dft::config_param::BWD_DISTANCE, forward_elements);
+        descriptor.set_value(oneapi::math::dft::config_param::BACKWARD_SCALE, backward_scale);
+        try {
+            commit_descriptor(descriptor, sycl_queue);
+        }
+        catch (oneapi::math::unimplemented&) {
+            //BACKWARD_SCALE not supported, go with 1 and scale at check
+            descriptor.set_value(oneapi::math::dft::config_param::BACKWARD_SCALE, 1.f);
+            commit_descriptor(descriptor, sycl_queue);
+            scale_at_check = true;
+        }
 
         std::vector<PrecisionType> host_inout_re(size_total, static_cast<PrecisionType>(0));
         std::vector<PrecisionType> host_inout_im(size_total, static_cast<PrecisionType>(0));
@@ -117,8 +138,8 @@ int DFT_Test<precision, domain>::test_in_place_real_real_buffer() {
         sycl::buffer<PrecisionType, 1> inout_im_buf{ host_inout_im.data(),
                                                      sycl::range<1>(size_total) };
 
-        oneapi::mkl::dft::compute_forward<descriptor_t, PrecisionType>(descriptor, inout_re_buf,
-                                                                       inout_im_buf);
+        oneapi::math::dft::compute_forward<descriptor_t, PrecisionType>(descriptor, inout_re_buf,
+                                                                        inout_im_buf);
 
         {
             auto acc_inout_re = inout_re_buf.get_host_access();
@@ -132,8 +153,8 @@ int DFT_Test<precision, domain>::test_in_place_real_real_buffer() {
                                            std::cout));
         }
 
-        oneapi::mkl::dft::compute_backward<std::remove_reference_t<decltype(descriptor)>,
-                                           PrecisionType>(descriptor, inout_re_buf, inout_im_buf);
+        oneapi::math::dft::compute_backward<std::remove_reference_t<decltype(descriptor)>,
+                                            PrecisionType>(descriptor, inout_re_buf, inout_im_buf);
 
         {
             auto acc_inout_re = inout_re_buf.get_host_access();
@@ -142,6 +163,12 @@ int DFT_Test<precision, domain>::test_in_place_real_real_buffer() {
             for (std::size_t i = 0; i < output_data.size(); ++i) {
                 output_data[i] = { acc_inout_re[i], acc_inout_im[i] };
             }
+            // account for scaling that occurs during DFT
+            if (scale_at_check)
+                std::for_each(input.begin(), input.end(), [this](auto& x) {
+                    x *= static_cast<PrecisionType>(forward_elements);
+                });
+
             EXPECT_TRUE(check_equal_vector(output_data.data(), input.data(), input.size(),
                                            abs_error_margin, rel_error_margin, std::cout));
         }
@@ -149,4 +176,4 @@ int DFT_Test<precision, domain>::test_in_place_real_real_buffer() {
     }
 }
 
-#endif //ONEMKL_COMPUTE_INPLACE_REAL_REAL_HPP
+#endif //ONEMATH_COMPUTE_INPLACE_REAL_REAL_HPP

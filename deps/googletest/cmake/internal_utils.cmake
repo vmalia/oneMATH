@@ -242,7 +242,9 @@ function(cxx_executable name dir libs)
 endfunction()
 
 # Sets PYTHONINTERP_FOUND and PYTHON_EXECUTABLE.
+if (CMAKE_VERSION VERSION_LESS 3.27)
 find_package(PythonInterp)
+endif()
 
 # cxx_test_with_flags(name cxx_flags libs srcs...)
 #

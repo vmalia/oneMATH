@@ -23,37 +23,14 @@
 #else
 #include <CL/sycl.hpp>
 #endif
-#if __has_include(<sycl/context.hpp>)
-#if __SYCL_COMPILER_VERSION <= 20220930
-#include <sycl/backend/cuda.hpp>
-#endif
-#include <sycl/context.hpp>
-#else
-#include <CL/sycl/backend/cuda.hpp>
-#include <CL/sycl/context.hpp>
-#endif
 
-// After Plugin Interface removal in DPC++ ur.hpp is the new include
-#if __has_include(<sycl/detail/ur.hpp>)
-#include <sycl/detail/ur.hpp>
-#ifndef ONEAPI_ONEMKL_PI_INTERFACE_REMOVED
-#define ONEAPI_ONEMKL_PI_INTERFACE_REMOVED
-#endif
-#elif __has_include(<sycl/detail/pi.hpp>)
-#include <sycl/detail/pi.hpp>
-#else
-#include <CL/sycl/detail/pi.hpp>
-#endif
-
-#include <atomic>
 #include <memory>
 #include <thread>
-#include <unordered_map>
 #include "cublas_helper.hpp"
 #include "cublas_handle.hpp"
 
 namespace oneapi {
-namespace mkl {
+namespace math {
 namespace blas {
 namespace cublas {
 
@@ -84,30 +61,51 @@ the handle must be destroyed when the context goes out of scope. This will bind 
 **/
 
 class CublasScopedContextHandler {
-    CUcontext original_;
-    sycl::context *placedContext_;
-    bool needToRecover_;
-    sycl::interop_handle &ih;
-#ifdef ONEAPI_ONEMKL_PI_INTERFACE_REMOVED
-    static thread_local cublas_handle<ur_context_handle_t> handle_helper;
-#else
-    static thread_local cublas_handle<pi_context> handle_helper;
-#endif
-    CUstream get_stream(const sycl::queue &queue);
-    sycl::context get_context(const sycl::queue &queue);
+    sycl::interop_handle& ih;
+    static thread_local cublas_handle handle_helper;
+    cublasHandle_t nativeHandle;
+    // Cache the native CU stream when the `CublasScopedContextHandler`object
+    // is constructed. This avoids calling `get_native_queue(ih)` multiple
+    // times which isn't guaranteed to return the same CUstream handle each
+    // time. A scenario that causes problems when trying to start/end cuda
+    // stream recording to a graph.
+    CUstream streamId;
 
 public:
-    CublasScopedContextHandler(sycl::queue queue, sycl::interop_handle &ih);
-
-    ~CublasScopedContextHandler() noexcept(false);
     /**
-   * @brief get_handle: creates the handle by implicitly impose the advice
-   * given by nvidia for creating a cublas_handle. (e.g. one cuStream per device
-   * per thread).
-   * @param queue sycl queue.
-   * @return cublasHandle_t a handle to construct cublas routines
-   */
-    cublasHandle_t get_handle(const sycl::queue &queue);
+    * @brief Constructor
+    * @detail Creates the cublasHandle_t by implicitly impose the advice
+    * given by nvidia for creating a cublas_handle. (e.g. one cuStream per device
+    * per thread).
+    */
+    CublasScopedContextHandler(sycl::interop_handle& ih);
+
+    /**
+    * @brief Start recording cuBlas calls to a graph.
+    * @detail Checks if the command-group associated with \p ih is being added
+    * to a graph, and if so, begin stream recording of the native CUDA stream
+    * associated with \p queue to the native cuda-graph object.
+    */
+    void begin_recording_if_graph();
+
+    /**
+    * @brief End recording cuBlas calls to a graph.
+    * @detail Checks if the command-group associated with \p ih is being added
+    * to a graph, and if so, ends stream recording of the native CUDA stream
+    * associated with \p queue to the native cuda-graph object. Doing any
+    * extra work to ensure that stream recorded calls get added as nodes to
+    * the native graph object associated with \p ih.
+    * @param queue The sycl queue to end stream recording on native stream
+    * backing the queue.
+    */
+    void end_recording_if_graph();
+
+    /// @brief Query the cuBLAS handle created on construction
+    /// @return cublasHandle_t a handle to construct cublas routines
+    cublasHandle_t get_handle() const {
+        return nativeHandle;
+    }
+
     // This is a work-around function for reinterpret_casting the memory. This
     // will be fixed when SYCL-2020 has been implemented for Pi backend.
     template <typename T, typename U>
@@ -115,14 +113,10 @@ public:
         CUdeviceptr cudaPtr = ih.get_native_mem<sycl::backend::ext_oneapi_cuda>(acc);
         return reinterpret_cast<T>(cudaPtr);
     }
-
-    void wait_stream(const sycl::queue &queue) {
-        cuStreamSynchronize(get_stream(queue));
-    }
 };
 
 } // namespace cublas
 } // namespace blas
-} // namespace mkl
+} // namespace math
 } // namespace oneapi
 #endif //_CUBLAS_SCOPED_HANDLE_HPP_

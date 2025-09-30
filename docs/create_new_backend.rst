@@ -107,9 +107,6 @@ Below you can see structure of oneMath top-level include directory:
                         <other backends>/
                 <other domains>/
 
-.. note::
-   The actual structure may be different than what is shown here. To ensure your addition of a new backend is correct, verify that the above scripts correctly generate sample header files from the new files you have added.
-
 To integrate the new third-party library to a oneMath header-based part, following files from this structure should be updated:
 
 * ``include/oneapi/math/detail/backends.hpp``: add the new backend
